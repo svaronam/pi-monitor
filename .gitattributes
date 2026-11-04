@@ -1,0 +1,2 @@
+# El panel web es un único HTML grande: no cuenta para el lenguaje del repo
+agente/index.html linguist-detectable=false
