@@ -1,0 +1,36 @@
+name: Compilar APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar la clave de firma (GitHub Secrets)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then echo "::error::Falta el secreto KEYSTORE_BASE64. Ver INSTALACION.md"; exit 1; fi
+          mkdir -p "$(dirname "$GITHUB_WORKSPACE/app-android/app/pimonitor.keystore")"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/app-android/app/pimonitor.keystore"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.10.2
+      - name: Meter la página en la app
+        run: |
+          mkdir -p app-android/app/src/main/assets
+          cp agente/index.html app-android/app/src/main/assets/index.html
+      - name: Compilar
+        working-directory: app-android
+        run: gradle assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PiMonitor-apk
+          path: app-android/app/build/outputs/apk/debug/app-debug.apk

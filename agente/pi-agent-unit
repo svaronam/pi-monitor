@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""
+pi-agent-unit: crea, borra, habilita, deshabilita, activa y desactiva los servicios de bots
+de Pi Monitor, y limpia los logs antiguos del sistema.
+Se ejecuta con sudo (ver /etc/sudoers.d/pi-agent). Los bots corren SIEMPRE como
+__RUN_USER__, nunca como root, y solo puede tocar unidades bot-*.
+"""
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+
+RUN_USER = "__RUN_USER__"
+SYSTEMD_DIR = "/etc/systemd/system"
+BOTS_DIR = "/opt/pi-agent/bots"
+NAME_RE = re.compile(r"^bot-[a-z0-9][a-z0-9-]{0,39}$")
+UNIT_RE = re.compile(r"^[A-Za-z0-9@._:-]+\.(service|timer)$")
+TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def sc(*args):
+    return subprocess.run(["systemctl", *args], capture_output=True, text=True)
+
+
+def one_line(s):
+    return " ".join(str(s or "").split())
+
+
+def fail(msg):
+    print(msg, file=sys.stderr)
+    sys.exit(1)
+
+
+def write_file(path, content, mode=0o644):
+    with open(path, "w") as f:
+        f.write(content)
+    os.chmod(path, mode)
+
+
+def write(name):
+    try:
+        d = json.load(sys.stdin)
+    except ValueError:
+        fail("Datos no válidos")
+    cmd = str(d.get("command") or "").strip()
+    if not cmd:
+        fail("Falta el comando")
+    home = os.path.expanduser(f"~{RUN_USER}")
+    wd = one_line(d.get("workdir")) or home
+    if wd.startswith("~"):
+        wd = home + wd[1:]
+    if not os.path.isdir(wd):
+        fail(f"La carpeta {wd} no existe en la Pi")
+    sched = one_line(d.get("schedule"))
+    if sched and not TIME_RE.match(sched):
+        fail("Hora no válida (usa HH:MM)")
+    restart = d.get("restart") if d.get("restart") in ("no", "on-failure", "always") else "on-failure"
+    if sched and restart == "always":
+        restart = "on-failure"
+    desc = one_line(d.get("description")) or name
+
+    os.makedirs(BOTS_DIR, exist_ok=True)
+    launcher = f"{BOTS_DIR}/{name}.sh"
+    write_file(launcher, "#!/bin/bash\n# Generado por Pi Monitor. Edita el bot desde la app.\n"
+                         f"cd {shlex.quote(wd)} || exit 1\n{cmd}\n", 0o755)
+
+    write_file(f"{SYSTEMD_DIR}/{name}.service", f"""[Unit]
+Description={desc}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={RUN_USER}
+ExecStart={launcher}
+Restart={restart}
+RestartSec=15
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
+""")
+
+    timer = f"{SYSTEMD_DIR}/{name}.timer"
+    if sched:
+        write_file(timer, f"""[Unit]
+Description=Programación de {desc}
+
+[Timer]
+OnCalendar=*-*-* {sched}:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+""")
+    sc("daemon-reload")
+    if sched:
+        sc("disable", f"{name}.service")
+        sc("enable", f"{name}.timer")
+        sc("restart", f"{name}.timer")
+    else:
+        if os.path.exists(timer):
+            sc("disable", "--now", f"{name}.timer")
+            os.remove(timer)
+            sc("daemon-reload")
+        sc("enable" if d.get("autostart") else "disable", f"{name}.service")
+    sc("try-restart", f"{name}.service")  # si ya estaba corriendo, coge los cambios
+    print("ok")
+
+
+def remove(name):
+    sc("disable", "--now", f"{name}.timer")
+    sc("disable", "--now", f"{name}.service")
+    for f in (f"{SYSTEMD_DIR}/{name}.service", f"{SYSTEMD_DIR}/{name}.timer", f"{BOTS_DIR}/{name}.sh"):
+        if os.path.exists(f):
+            os.remove(f)
+    sc("daemon-reload")
+    print("ok")
+
+
+def toggle(op, unit):
+    r = sc(op, unit)
+    if r.returncode != 0:
+        fail((r.stderr or r.stdout).strip() or f"No se pudo hacer {op}")
+    print("ok")
+
+
+PROTECTED = {"ssh.service", "sshd.service", "tailscaled.service", "pi-agent.service",
+             "smbd.service", "nmbd.service", "systemd-journald.service", "dbus.service"}
+
+
+def has_timer(unit):
+    if not unit.endswith(".service"):
+        return None
+    t = unit[:-8] + ".timer"
+    r = sc("show", t, "--property=LoadState")
+    return t if "LoadState=loaded" in r.stdout else None
+
+
+def onoff(op, unit):
+    """off: para y deshabilita el servicio y su timer (no vuelve a arrancar, ni al reiniciar la Pi).
+    on: lo contrario. Si el bot tiene timer, se activa el timer y el servicio queda a sus órdenes."""
+    if unit in PROTECTED:
+        fail(f"{unit} es del sistema: no se puede desactivar desde la app")
+    timer = has_timer(unit)
+    errs = []
+    if op == "off":
+        if timer:
+            r = sc("disable", "--now", timer)
+            if r.returncode != 0:
+                errs.append(r.stderr.strip())
+        r = sc("disable", "--now", unit)
+        if r.returncode != 0:
+            errs.append(r.stderr.strip())
+    else:
+        if timer:
+            r = sc("enable", "--now", timer)
+        else:
+            r = sc("enable", "--now", unit)
+        if r.returncode != 0:
+            errs.append(r.stderr.strip())
+    if errs:
+        fail("; ".join(e for e in errs if e) or f"No se pudo hacer {op}")
+    print("ok")
+
+
+def vacuum(days):
+    before = subprocess.run(["journalctl", "--disk-usage"], capture_output=True, text=True).stdout.strip()
+    r = subprocess.run(["journalctl", f"--vacuum-time={days}d"], capture_output=True, text=True)
+    after = subprocess.run(["journalctl", "--disk-usage"], capture_output=True, text=True).stdout.strip()
+    if r.returncode != 0:
+        fail((r.stderr or r.stdout).strip() or "No se pudieron limpiar los logs")
+    print(f"Antes: {before}\nDespués: {after}")
+
+
+if __name__ == "__main__":
+    a = sys.argv[1:]
+    if len(a) == 2 and a[0] in ("write", "remove") and NAME_RE.match(a[1]):
+        (write if a[0] == "write" else remove)(a[1])
+    elif len(a) == 2 and a[0] in ("enable", "disable") and UNIT_RE.match(a[1]):
+        toggle(a[0], a[1])
+    elif len(a) == 2 and a[0] in ("on", "off") and UNIT_RE.match(a[1]) and a[1].endswith(".service"):
+        onoff(a[0], a[1])
+    elif len(a) == 2 and a[0] == "vacuum" and a[1].isdigit() and 1 <= int(a[1]) <= 90:
+        vacuum(int(a[1]))
+    else:
+        fail("uso: pi-agent-unit write|remove bot-nombre  |  enable|disable|on|off unidad.service"
+             "  |  vacuum DIAS")

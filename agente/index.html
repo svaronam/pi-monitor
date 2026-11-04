@@ -1,0 +1,1087 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0F1412">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icon.svg">
+<title>Pi Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0F1412;--nav:#131A17;--card:#18201C;--card2:#1E2823;--line:#26302B;--line2:#3A4740;
+  --txt:#E8EDEA;--mut:#9AA8A1;--mut2:#B5C1BB;--dim:#6B7A73;
+  --ok:#4ADE80;--ok-bg:#123326;--ok-line:#2F5E40;--ok-txt:#86EFAC;
+  --warn:#FBBF24;--warn-bg:#2A2312;--warn-line:#5C4A1A;--warn-txt:#FDE68A;--warn-mut:#D6C38A;
+  --bad:#F87171;--bad-bg:#2A1414;--bad-line:#5A2424;--bad-txt:#FCA5A5;
+  --blue-bg:#15233A;--blue-line:#2F4A6B;--blue-txt:#93C5FD;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,Consolas,monospace;
+  --sans:'Space Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt)}
+body{font:15px/1.4 var(--sans);min-height:100vh}
+a{color:var(--ok);text-decoration:none}
+button{font:inherit;color:inherit;cursor:pointer}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.5}
+code,.mono{font-family:var(--mono)}
+.app{max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.top{padding:calc(20px + env(safe-area-inset-top)) 20px 10px;display:flex;align-items:center;gap:10px}
+.top .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.top h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .sub{font-size:13px;color:var(--mut)}
+.top.back{padding:calc(14px + env(safe-area-inset-top)) 12px 4px;gap:4px}
+.ib{width:44px;height:44px;flex:none;border-radius:12px;border:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;position:relative;padding:0}
+.ib.plain{border:0;background:transparent}
+.ib .badge-dot{position:absolute;top:9px;right:10px;width:8px;height:8px;border-radius:50%;background:var(--ok)}
+main{flex:1;padding:4px 16px calc(96px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--nav);border-top:1px solid var(--line);padding:8px 8px calc(10px + env(safe-area-inset-bottom))}
+.nav .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.nav button{background:none;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:48px;color:var(--mut);font-size:12px}
+.nav button.on{color:var(--ok);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.card.sm{border-radius:14px;padding:12px 14px}
+.card h2,.sec-t{margin:0;font-size:15px;font-weight:600}
+.sec-t{margin:0 4px}
+.sep{height:1px;background:var(--line)}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.tile b{font-size:22px;font-weight:700}.tile span{font-size:12px;color:var(--mut)}
+.banner{display:flex;gap:12px;align-items:center;border-radius:14px;padding:12px 14px;border:1px solid var(--warn-line);background:var(--warn-bg);color:var(--warn-txt);text-align:left;width:100%}
+.banner.bad{border-color:var(--bad-line);background:var(--bad-bg);color:var(--bad-txt)}
+.banner .bt{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.banner .bt b{font-size:14px;font-weight:600}.banner .bt span{font-size:12px;opacity:.85}
+.pihead{display:flex;align-items:center;justify-content:space-between;gap:10px;background:none;border:0;padding:0;text-align:left;width:100%;min-height:32px}
+.pihead .n{display:flex;align-items:center;gap:10px;min-width:0}
+.pihead h2{margin:0;font-size:18px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pihead .up{font-family:var(--mono);font-size:12px;color:var(--mut);display:flex;align-items:center;gap:4px;white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--dim)}
+.dot.sm{width:8px;height:8px}
+.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}.dot.off{background:#3A4740}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;font-family:var(--mono)}
+.metrics div{display:flex;flex-direction:column;gap:2px}
+.metrics b{font-size:15px;font-weight:500}.metrics span{font-size:11px;color:var(--mut)}
+.w{color:var(--warn)!important}.r{color:var(--bad)!important}.g{color:var(--ok)!important}
+.botrow{display:flex;align-items:center;gap:8px}
+.botrow .lk{flex:1;min-width:0;display:flex;align-items:center;gap:10px;min-height:44px;background:none;border:0;padding:0;text-align:left;color:var(--txt)}
+.botrow .lk.offn{color:var(--dim)}
+.botrow .nmw{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px;padding:4px 0}
+.botrow .nm{font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.botrow .ad{font:12px var(--mono);color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.botrow .lk.offn .ad{color:var(--dim)}
+a.pill{display:inline-flex;align-items:center;gap:6px}
+.botrow .in{flex:none;font-size:12px;color:var(--mut);max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sw{flex:none;width:52px;height:44px;border:0;background:transparent;padding:0;display:flex;align-items:center;justify-content:center}
+.sw i{width:40px;height:24px;border-radius:999px;background:#2E3833;display:flex;align-items:center;justify-content:flex-start;padding:3px;transition:background .15s}
+.sw i::after{content:"";width:18px;height:18px;border-radius:50%;background:#8A9891;transition:transform .15s}
+.sw.on i{background:var(--ok);justify-content:flex-end}.sw.on i::after{background:var(--bg)}
+.sw.busy{opacity:.5;pointer-events:none}
+.swsp{flex:none;width:52px}
+.dashed{min-height:48px;border-radius:14px;border:1px dashed var(--line2);background:transparent;color:var(--mut);font-size:14px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:13px;font-weight:500}
+.chip.on{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+.grp{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:1px;padding:4px 4px 0}
+.ev{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;text-align:left;width:100%;color:var(--txt)}
+.tag{flex:none;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:500}
+.tag.s{width:32px;height:32px;border-radius:9px}
+.c-wallapop{background:#123326;color:#86EFAC}.c-opos{background:#1A2A44;color:#93C5FD}.c-diecast{background:#3A2410;color:#FDBA74}
+.c-musica{background:#2E1A3D;color:#D8B4FE}.c-sistema{background:#3A1717;color:#FCA5A5}.c-otros{background:#232B33;color:#CBD5E1}
+.ev .b{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.ev .meta{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--mut);font-family:var(--mono)}
+.ev .meta span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev .ti{font-size:15px;font-weight:500;line-height:1.3;word-break:break-word}
+.ev .de{font-size:13px;color:var(--mut2);line-height:1.35;word-break:break-word}
+.empty{text-align:center;padding:36px 12px;color:var(--mut);display:flex;flex-direction:column;gap:14px;align-items:center}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{padding:4px 10px;border-radius:999px;font-size:13px;font-weight:600;background:#2A2F2D;color:#C9D2CD}
+.pill.ok{background:var(--ok-bg);color:var(--ok-txt)}.pill.warn{background:#3A2E10;color:var(--warn-txt)}.pill.bad{background:var(--bad-bg);color:var(--bad-txt)}
+.pill.ln{background:var(--card);border:1px solid var(--line);color:var(--mut2);font-weight:400}
+.pill.mono{font-family:var(--mono);font-weight:400}
+.ttl{display:flex;flex-direction:column;gap:8px;padding:0 4px}
+.ttl h1{margin:0;font-size:28px;font-weight:700;letter-spacing:-.5px;word-break:break-word}
+.acts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.acts.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.act{min-height:64px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--txt);font-size:13px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px}
+.acts.two .act{min-height:56px;flex-direction:row;gap:8px;font-size:14px}
+.act.ok{border-color:var(--ok-line);background:var(--ok-bg);color:var(--ok-txt)}
+.act.bad{border-color:var(--bad-line);background:var(--bad-bg);color:var(--bad-txt)}
+.act.blue{border-color:var(--blue-line);background:var(--blue-bg);color:var(--blue-txt)}
+.kv{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;min-height:22px}
+.kv>span:first-child{color:var(--mut)}
+.kv>span:last-child{text-align:right;word-break:break-word}
+.kv .mono{font-size:14px}
+.runs{display:flex;gap:3px;height:28px;align-items:stretch}
+.runs i{flex:1;border-radius:4px}
+.box{min-height:36px;padding:0 6px 0 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line);font-family:var(--mono);font-size:14px;display:flex;align-items:center;gap:6px}
+.box button{width:28px;height:28px;border:0;background:transparent;color:var(--mut);display:flex;align-items:center;justify-content:center;padding:0}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.days button{min-height:40px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--mut);font-size:13px;font-weight:600;padding:0}
+.days button.on{border-color:var(--ok-line);background:var(--ok-bg);color:var(--ok-txt)}
+.wrap{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--card2);color:var(--txt);font-size:14px;font-weight:600;padding:0 14px}
+.btn.pri{background:var(--ok);border-color:var(--ok);color:var(--bg)}
+.btn.blue{border-color:var(--blue-line);background:var(--blue-bg);color:var(--blue-txt)}
+.btn.bad{border-color:var(--bad-line);background:var(--bad-bg);color:var(--bad-txt)}
+.btn.sm{min-height:36px;font-size:13px;padding:0 12px}
+.btn.full{width:100%}
+.log{background:#0A0E0C;border:1px solid var(--line);border-radius:14px;padding:12px;font:11.5px/1.6 var(--mono);color:var(--mut2);white-space:pre-wrap;word-break:break-word;max-height:320px;overflow:auto;margin:0}
+.seg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px}
+.seg button{min-height:40px;border-radius:9px;border:0;background:transparent;color:var(--mut);font-size:14px;font-weight:600}
+.seg button.on{background:#2A3530;color:var(--txt)}
+.chart .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.chart .hd span{font-family:var(--mono);font-size:12px;color:var(--mut)}
+.chart .hd b{color:var(--txt);font-size:15px;font-weight:500}
+.bars{display:flex;align-items:flex-end;gap:2px;height:64px}
+.bars i{flex:1;border-radius:2px 2px 0 0;min-height:2px}
+.axis{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);font-family:var(--mono)}
+.stack{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--bg)}
+.leg{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.leg div{display:flex;justify-content:space-between;gap:8px}
+.leg div span:first-child{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leg i{width:10px;height:10px;border-radius:3px;flex:none}
+.card.warnc{background:var(--warn-bg);border-color:var(--warn-line)}
+.card.warnc h2{color:var(--warn-txt)}
+.card.okc{background:var(--ok-bg);border-color:var(--ok-line)}
+.big{margin:0;font-size:17px;line-height:1.4;font-weight:500}
+.lab{font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.mut{color:var(--mut);font-size:13px}
+.reasons{margin:0;padding:0;list-style:none;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.reasons li.bad{color:var(--bad-txt)}.reasons li.warn{color:var(--warn-txt)}
+.svc{display:flex;align-items:center;gap:10px;min-height:44px;flex-wrap:wrap}
+.svc .n{flex:1;min-width:120px;word-break:break-word}
+.svc .n b{font-weight:500}
+.svc .bt{display:flex;gap:6px;flex-wrap:wrap}
+select,input:not([type=checkbox]){font:inherit;color:var(--txt);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;width:100%;min-height:44px}
+input[type=time]{width:auto;font-family:var(--mono);min-height:36px;padding:4px 10px}
+select.inl{width:auto;min-height:36px;padding:4px 10px;font-family:var(--mono);font-size:14px}
+input[type=checkbox]{width:22px;height:22px;flex:none;accent-color:var(--ok)}
+label.f{display:block;font-size:13px;color:var(--mut);margin:12px 0 4px}
+label.chk{display:flex;gap:12px;align-items:center;justify-content:space-between;font-size:14px;min-height:44px}
+label.chk span{display:flex;flex-direction:column;gap:2px}
+label.chk small{font-size:12px;color:var(--mut)}
+.modal{position:fixed;inset:0;background:rgba(5,8,7,.72);display:none;align-items:flex-end;justify-content:center;z-index:20}
+.modal.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:560px;border-radius:22px 22px 0 0;border-top:1px solid var(--line);padding:22px 20px calc(26px + env(safe-area-inset-bottom));max-height:90vh;overflow:auto}
+.sheet h2{margin:0 0 8px;font-size:19px;font-weight:700}
+.sheet p{margin:6px 0;font-size:14px;color:var(--mut2);line-height:1.45}
+.sheet .row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px}
+.sheet .col{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.sheet pre{background:#0A0E0C;border:1px solid var(--line);border-radius:12px;padding:10px;font:12px/1.5 var(--mono);white-space:pre-wrap;word-break:break-word;max-height:55vh;overflow:auto;margin:8px 0 0;color:var(--mut2)}
+.qk{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.qk button{font:12px var(--mono);padding:6px 9px;border-radius:9px;border:1px solid var(--line);background:var(--card2);color:var(--txt)}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--card2);border:1px solid var(--line);padding:10px 14px;border-radius:12px;z-index:30;display:none;max-width:90vw;font-size:14px}
+.note{font-size:12px;color:var(--mut);line-height:1.4}
+svg{flex:none}
+@media (max-width:360px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.tiles b{font-size:19px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="top"></div>
+  <main id="view"></main>
+</div>
+<nav class="nav" id="nav"><div class="in">
+  <button data-v="inicio" onclick="go('inicio',{},true)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Inicio</button>
+  <button data-v="feed" onclick="go('feed',{},true)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>Feed</button>
+  <button data-v="resumen" onclick="go('resumen',{},true)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg>Resumen</button>
+</div></nav>
+<div class="modal" id="modal"><div class="sheet" id="sheet" role="dialog"></div></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const jsq = s => esc(String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)) } catch {} }
+};
+
+// ================================================================ puente con la APK
+// Dentro de la APK existe window.PiNative: guarda las Pi en Android (para el servicio de avisos) y hace las peticiones HTTP.
+const NATIVE = window.PiNative || null;
+function loadPis() {
+  if (NATIVE) { try { const l = JSON.parse(NATIVE.getPis() || '[]'); if (l.length) return l } catch {} }
+  return store.get('pimon.pis', []);
+}
+function savePis() { store.set('pimon.pis', pis); if (NATIVE) NATIVE.setPis(JSON.stringify(pis)) }
+function nativeAjustes() { try { return Object.assign({ avisos: true, caida_min: 3 }, JSON.parse(NATIVE.getAjustes() || '{}')) } catch { return { avisos: true, caida_min: 3 } } }
+const pending = {}; let reqSeq = 0;
+window.__piResolve = (id, status, text) => { const f = pending[id]; if (f) { delete pending[id]; f({ status, text }) } };
+function nativeFetch(url, method, headers, body, timeout) {
+  return new Promise(resolve => { const id = ++reqSeq; pending[id] = resolve; NATIVE.http(id, method, url, JSON.stringify(headers), body || '', timeout) });
+}
+
+let pis = loadPis();
+if (NATIVE && pis.length) savePis();
+let settings = Object.assign({ telegram: { token: '', chat_id: '' }, alerts: { temp: 75, disk: 90, offline_after: 3, boot: true, shutdown: true }, heartbeat_url: '', resumen: { activo: true, hora: '22:00' } }, store.get('pimon.settings', {}));
+settings.resumen = Object.assign({ activo: true, hora: '22:00' }, settings.resumen || {});
+
+async function api(pi, path, opts = {}, timeout = 8000) {
+  if (NATIVE) {
+    const headers = { 'Authorization': 'Bearer ' + pi.token, ...(opts.body ? { 'Content-Type': 'application/json' } : {}) };
+    const r = await nativeFetch(pi.url.replace(/\/+$/, '') + path, opts.method || 'GET', headers, opts.body, timeout);
+    if (r.status === -1) throw new Error('Sin respuesta (¿apagada o fuera de red?)');
+    if (r.status === 0) throw new Error('No se puede conectar' + (r.text ? ' (' + r.text + ')' : ''));
+    let j = {}; try { j = JSON.parse(r.text) } catch {}
+    if (r.status === 404 && j.error === 'no existe') throw new Error('Agente antiguo: vuelve a ejecutar install.sh en esta Pi');
+    if (r.status < 200 || r.status >= 300) throw new Error(j.error || 'HTTP ' + r.status);
+    return j;
+  }
+  const ctl = new AbortController(); const h = setTimeout(() => ctl.abort(), timeout);
+  try {
+    const r = await fetch(pi.url.replace(/\/+$/, '') + path, {
+      ...opts, signal: ctl.signal,
+      headers: { 'Authorization': 'Bearer ' + pi.token, ...(opts.body ? { 'Content-Type': 'application/json' } : {}) }
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 404 && j.error === 'no existe') throw new Error('Agente antiguo: vuelve a ejecutar install.sh en esta Pi');
+    if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+    return j;
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Sin respuesta (¿apagada o fuera de red?)');
+    if (e instanceof TypeError) throw new Error('No se puede conectar');
+    throw e;
+  } finally { clearTimeout(h) }
+}
+const post = (pi, path, body, t) => api(pi, path, { method: 'POST', body: JSON.stringify(body) }, t);
+
+// ================================================================ utilidades
+function toast(msg, ms = 2500) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ms) }
+const fmtB = b => { if (b == null) return '–'; const u = ['B','KB','MB','GB','TB']; let i = 0; while (b >= 1024 && i < 4) { b /= 1024; i++ } return b.toFixed(i > 2 ? 1 : 0).replace('.', ',') + ' ' + u[i] };
+const fmtGB = b => b == null ? '–' : Math.round(b / 1024 ** 3) + ' GB';
+const fmtUp = s => { const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60); return d ? `${d} d ${h} h` : h ? `${h} h ${m} min` : `${m} min` };
+const agoS = s => s == null ? '' : s < 60 ? `hace ${Math.max(1, Math.round(s))} s` : s < 3600 ? `hace ${Math.round(s / 60)} min` : s < 86400 ? `hace ${Math.round(s / 3600)} h` : `hace ${Math.round(s / 86400)} d`;
+const pad = n => String(n).padStart(2, '0');
+const hhmm = ts => { const d = new Date(ts * 1000); return pad(d.getHours()) + ':' + pad(d.getMinutes()) };
+const ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const todayStr = () => ymd(new Date());
+const DIAS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+function fechaLarga(s) { const [y, m, d] = s.split('-').map(Number); const dt = new Date(y, m - 1, d); return `${DIAS[(dt.getDay() + 6) % 7]}, ${d} de ${MESES[m - 1]}` }
+function dayLabel(ts) {
+  const d = new Date(ts * 1000), t = new Date(), y = new Date(); y.setDate(t.getDate() - 1);
+  if (d.toDateString() === t.toDateString()) return 'Hoy';
+  if (d.toDateString() === y.toDateString()) return 'Ayer';
+  return `${d.getDate()} de ${MESES[d.getMonth()]}`;
+}
+// "2026-11-02 23:12:01 CET" (systemd) → "hoy 23:12"
+function fmtTs(s) {
+  const m = /(\d{4})-(\d\d)-(\d\d) (\d\d):(\d\d)/.exec(s || ''); if (!m) return '';
+  const day = new Date(+m[1], m[2] - 1, +m[3]).toDateString(), t = new Date();
+  const rel = n => { const x = new Date(t); x.setDate(t.getDate() + n); return x.toDateString() };
+  const d = day === rel(0) ? 'hoy' : day === rel(1) ? 'mañana' : day === rel(-1) ? 'ayer' : `${m[3]}/${m[2]}`;
+  return `${d} ${m[4]}:${m[5]}`;
+}
+const ICO = {
+  chev: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>',
+  back: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>',
+  bell: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+  refresh: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
+  warn: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+  play: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16l13-8z"/></svg>',
+  power: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>',
+  list: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg>',
+  net: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>',
+  trash: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/></svg>',
+  term: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m4 17 6-5-6-5"/><path d="M12 19h8"/></svg>',
+  x: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
+  down: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>',
+  plus: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+};
+const CATS = { wallapop: ['Wallapop', 'WP'], opos: ['Oposiciones', 'OP'], diecast: ['Diecast', 'HW'], musica: ['Música', 'SP'], otros: ['Otros', '··'], sistema: ['Sistema', 'SYS'] };
+const catOf = c => CATS[c] ? c : 'otros';
+const tagOf = (cat, bot) => cat === 'otros' && bot ? bot.replace(/[^a-z0-9]/gi, '').slice(0, 2).toUpperCase() || '··' : CATS[catOf(cat)][1];
+
+// ================================================================ datos
+const cache = {};   // estado de cada Pi
+const evs = {};     // eventos de cada Pi: { ultimo, list }
+const hist = {};    // historial para gráficas
+const disco = {};   // reparto de la SD
+const vers = {};    // versión de cada bot
+const busy = new Set();
+
+async function refreshOne(pi) {
+  try { cache[pi.id] = { status: await api(pi, '/api/status'), at: Date.now() } }
+  catch (e) { cache[pi.id] = { error: e.message, at: Date.now() } }
+  const s = cache[pi.id].status;
+  if (s && s.eventos_ultimo !== undefined) await refreshEvents(pi, s.eventos_ultimo);
+}
+async function refreshEvents(pi, ultimo) {
+  const e = evs[pi.id];
+  if (e && e.ultimo === ultimo) return;
+  const desde = e && ultimo > e.ultimo ? e.ultimo : 0;
+  try {
+    const r = await api(pi, '/api/eventos?desde=' + desde, {}, 12000);
+    const list = desde ? [...(e?.list || []), ...r.eventos] : r.eventos;
+    evs[pi.id] = { ultimo: r.ultimo, list: list.slice(-2000) };
+  } catch {}
+}
+let refreshing = null;
+async function refreshAll() {
+  if (refreshing) return refreshing;
+  refreshing = Promise.all(pis.map(refreshOne)).finally(() => { refreshing = null });
+  await refreshing;
+  render();
+}
+const st = id => cache[id]?.status;
+const piById = id => pis.find(p => p.id === id);
+
+function botState(b) {
+  const a = b.ActiveState;
+  if (b.activado === false) return { lvl: 'off', txt: 'desactivado', pill: 'Desactivado · no se ejecutará' };
+  if (b.bloqueado) return { lvl: 'bad', txt: 'parado · límite de reinicios', pill: 'Parado · límite de reinicios' };
+  if (b.LoadState === 'not-found') return { lvl: 'bad', txt: 'no existe en la Pi', pill: 'No existe en la Pi' };
+  if (a === 'failed') { const w = fmtTs(b.InactiveEnterTimestamp); return { lvl: 'bad', txt: 'falló' + (w ? ' ' + w.replace('hoy ', '') : ''), pill: 'Falló' + (w ? ' · ' + w : '') } }
+  if (b.colgado) return { lvl: 'warn', txt: 'colgado', pill: 'Colgado · sin señal de vida' };
+  if (a === 'activating' || a === 'reloading') return { lvl: 'warn', txt: 'arrancando…', pill: 'Arrancando…' };
+  if (a === 'deactivating') return { lvl: 'warn', txt: 'parando…', pill: 'Parando…' };
+  if (a === 'active') {
+    const w = fmtTs(b.ActiveEnterTimestamp);
+    return { lvl: 'ok', txt: b.latido_hace != null ? agoS(b.latido_hace) : (w ? 'desde ' + w.replace('hoy ', '') : 'activo'), pill: 'Activo' + (w ? ' desde ' + w : '') };
+  }
+  if (b.timer) return { lvl: 'idle', txt: 'esperando' + (fmtTs(b.timer.next) ? ' · ' + fmtTs(b.timer.next) : ''), pill: 'Esperando a su hora' };
+  return { lvl: 'idle', txt: 'parado', pill: 'Parado' };
+}
+const botOn = b => b.activado !== undefined ? b.activado : ['enabled', 'static', 'enabled-runtime'].includes(b.UnitFileState);
+// dirección del panel del bot: homelab1:8787 (el puerto puesto a mano manda sobre el detectado)
+function botAddr(pi, b) {
+  const port = b.puerto || (b.puertos || [])[0];
+  if (!port) return null;
+  let host = '';
+  try { host = new URL(pi.url).hostname } catch {}
+  return { label: `${pi.name}:${port}`, href: host ? `http://${host.includes(':') ? '[' + host + ']' : host}:${port}/` : null, port, manual: !!b.puerto, otros: (b.puertos || []).filter(p => p !== port) };
+}
+
+function health(c) {
+  if (!c) return { lvl: '', label: 'Comprobando…', reasons: [] };
+  if (c.error) return { lvl: 'bad', label: 'Sin conexión', reasons: [{ l: 'bad', t: c.error }] };
+  const s = c.status, r = [];
+  const add = (l, t) => r.push({ l, t });
+  const bots = new Set((s.bots || []).map(b => b.unit));
+  if (s.temp != null) { if (s.temp >= 80) add('bad', `Temperatura muy alta: ${s.temp} °C`); else if (s.temp >= 70) add('warn', `Temperatura alta: ${s.temp} °C`) }
+  const dlim = s.alerts_disk || settings.alerts.disk || 90;
+  if (s.disk.percent >= Math.max(dlim, 95)) add('bad', `SD casi llena (${Math.round(s.disk.percent)} %)`); else if (s.disk.percent >= Math.min(dlim, 85)) add('warn', `SD al ${Math.round(s.disk.percent)} %`);
+  if (s.memory.percent >= 92) add('warn', `RAM al ${Math.round(s.memory.percent)} %`);
+  if (s.cpu.load[1] > s.cpu.count * 1.5) add('warn', `Carga alta (${s.cpu.load[1]})`);
+  if (s.throttled.available) {
+    if (s.throttled.now) add('bad', s.throttled.flags.filter(f => f.includes('AHORA')).join(', ') + ': revisa la fuente de alimentación');
+    else if (s.throttled.past) add('warn', 'Desde el arranque: ' + s.throttled.flags.join(', ').replace(/ desde el arranque/g, '').toLowerCase());
+  }
+  for (const u of s.failed_units) if (!bots.has(u)) add('bad', 'Ha fallado: ' + u);
+  for (const v of s.services) if (v.ActiveState !== 'active' && !s.failed_units.includes(v.name) && !bots.has(v.name)) add('warn', `${v.name}: ${v.LoadState === 'not-found' ? 'no existe' : v.ActiveState}`);
+  const lvl = r.some(x => x.l === 'bad') ? 'bad' : r.length ? 'warn' : 'ok';
+  return { lvl, label: { ok: 'Todo bien', warn: 'Aviso', bad: 'Problema' }[lvl], reasons: r };
+}
+function allBots() {
+  const out = [];
+  for (const pi of pis) for (const b of st(pi.id)?.bots || []) out.push({ pi, b });
+  return out;
+}
+function allEvents() {
+  const out = [];
+  for (const pi of pis) for (const e of evs[pi.id]?.list || []) out.push({ ...e, pi });
+  return out.sort((a, b) => b.ts - a.ts || b.id - a.id);
+}
+// cómo se ve un evento en el feed
+function evView(e) {
+  const cat = e.tipo === 'bot' ? catOf(e.cat) : (['fallo', 'colgado', 'bloqueado', 'reinicio'].includes(e.tipo) || !e.bot ? 'sistema' : catOf(e.cat));
+  const icon = (e.titulo || '').split(' ')[0];
+  if (e.tipo === 'bot') return { cat: catOf(e.cat), tag: tagOf(e.cat, e.bot), who: e.bot, title: e.titulo, detail: e.msg };
+  if (e.tipo === 'resumen') return { cat: 'sistema', tag: 'RES', who: e.pi.name, title: 'Resumen del día', detail: (e.msg || '').replace(/^Resumen del día: /, '') };
+  let title = e.msg || e.titulo, detail = '';
+  const m = e.bot && title.startsWith(e.bot + ': ') ? title.slice(e.bot.length + 2) : null;
+  if (m) { const i = m.indexOf('. '); title = i > 0 ? m.slice(0, i) : m; detail = i > 0 ? m.slice(i + 2) : '' }
+  if (/^\p{Extended_Pictographic}/u.test(title)) title = title.replace(/^\S+\s/, '');
+  return { cat, tag: cat === 'sistema' ? 'SYS' : tagOf(cat, e.bot), who: e.bot || e.pi.name, title: title.charAt(0).toUpperCase() + title.slice(1), detail, icon };
+}
+
+// ================================================================ navegación
+let route = { v: 'inicio' };
+const stack = [];
+function go(v, p = {}, root = false) {
+  if (root) stack.length = 0; else stack.push(route);
+  route = { v, ...p };
+  window.scrollTo(0, 0);
+  render();
+  if (v === 'pi') { loadHist(route.pi, route.rango || '24h'); loadDisco(route.pi) }
+  if (v === 'bot') { loadVersion(route.pi, route.unit); loadBotLog(route.pi, route.unit) }
+  if (v === 'resumen') loadResumen(route.fecha || todayStr());
+}
+function back() { route = stack.pop() || { v: 'inicio' }; render() }
+// Botón atrás de Android: cierra la hoja abierta o vuelve atrás. Devuelve false si no hay nada que cerrar.
+function goBack() {
+  if ($('#modal').classList.contains('on')) { closeModal(); return true }
+  if (route.v !== 'inicio') { back(); return true }
+  return false;
+}
+
+function render() {
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.v === route.v || (b.dataset.v === 'inicio' && ['pi', 'bot'].includes(route.v))));
+  const keepFocus = document.activeElement?.id;
+  ({ inicio: renderInicio, feed: renderFeed, resumen: renderResumen, pi: renderPi, bot: renderBot }[route.v] || renderInicio)();
+  if (keepFocus && $('#' + keepFocus)) $('#' + keepFocus).focus();
+}
+function setTop(html) { $('#top').innerHTML = html }
+const topBack = label => `<div class="top back"><button class="ib plain" aria-label="Volver" onclick="back()">${ICO.back}</button><span class="mut" style="font-size:14px">${esc(label)}</span></div>`;
+
+// ================================================================ INICIO
+function botRow(pi, b) {
+  const s = botState(b), on = botOn(b), key = pi.id + '|' + b.unit, ad = botAddr(pi, b);
+  return `<div class="botrow">
+    <button class="lk ${on ? '' : 'offn'}" onclick="go('bot',{pi:'${pi.id}',unit:'${jsq(b.unit)}'})">
+      <span class="dot sm ${s.lvl}"></span><span class="nmw"><span class="nm">${esc(b.label)}</span>${ad ? `<span class="ad">${esc(ad.label)}</span>` : ''}</span><span class="in ${s.lvl === 'bad' ? 'r' : s.lvl === 'warn' ? 'w' : ''}">${esc(s.txt)}</span></button>
+    <button class="sw ${on ? 'on' : ''} ${busy.has(key) ? 'busy' : ''}" role="switch" aria-checked="${on}" aria-label="${on ? 'Desactivar' : 'Activar'} ${esc(b.label)}" onclick="toggleBot('${pi.id}','${jsq(b.unit)}')"><i></i></button>
+  </div>`;
+}
+function piCard(pi) {
+  const c = cache[pi.id], h = health(c), s = c?.status;
+  const dlim = settings.alerts.disk || 90;
+  const head = `<button class="pihead" onclick="go('pi',{pi:'${pi.id}'})" aria-label="Detalles de ${esc(pi.name)}">
+      <span class="n"><span class="dot ${h.lvl}"></span><h2>${esc(pi.name)}</h2></span>
+      <span class="up">${s ? 'up ' + fmtUp(s.uptime) : c?.error ? 'sin conexión' : '…'}${ICO.chev}</span></button>`;
+  if (!s) return `<section class="card">${head}${c?.error ? `<p class="mut r" style="margin:0">${esc(c.error)}</p>` : '<p class="mut" style="margin:0">Conectando…</p>'}</section>`;
+  const tw = s.temp >= 70 ? 'w' : '', dw = s.disk.percent >= Math.min(dlim, 85) ? 'w' : '', rw = s.memory.percent >= 92 ? 'w' : '';
+  return `<section class="card">${head}
+    <div class="metrics">
+      <div><b class="${tw}">${s.temp != null ? Math.round(s.temp) + '°' : '–'}</b><span>temp</span></div>
+      <div><b>${Math.round(s.cpu.percent)}%</b><span>CPU</span></div>
+      <div><b class="${rw}">${Math.round(s.memory.percent)}%</b><span>RAM</span></div>
+      <div><b class="${dw}">${Math.round(s.disk.percent)}%</b><span class="${dw}">${dw ? 'SD llena' : 'SD'}</span></div>
+    </div>
+    ${(s.bots || []).length ? `<div class="sep"></div>${s.bots.map(b => botRow(pi, b)).join('')}` : `<p class="mut" style="margin:0">Sin bots enlazados en esta Pi.</p>`}
+  </section>`;
+}
+function topIssue() {
+  for (const { pi, b } of allBots()) { const s = botState(b); if (s.lvl === 'bad') return { lvl: 'bad', t: `${b.label}: ${s.pill.toLowerCase()}`, d: pi.name, go: `go('bot',{pi:'${pi.id}',unit:'${jsq(b.unit)}'})` } }
+  for (const pi of pis) { const h = health(cache[pi.id]); const r = h.reasons.find(x => x.l === 'bad'); if (r) return { lvl: 'bad', t: `${pi.name}: ${r.t}`, d: 'Toca para ver la Pi', go: `go('pi',{pi:'${pi.id}'})` } }
+  for (const { pi, b } of allBots()) { const s = botState(b); if (s.lvl === 'warn') return { lvl: 'warn', t: `${b.label}: ${s.pill.toLowerCase()}`, d: pi.name, go: `go('bot',{pi:'${pi.id}',unit:'${jsq(b.unit)}'})` } }
+  for (const pi of pis) { const h = health(cache[pi.id]); const r = h.reasons[0]; if (r) return { lvl: 'warn', t: `${pi.name}: ${r.t}`, d: 'Toca para ver la Pi', go: `go('pi',{pi:'${pi.id}'})` } }
+  return null;
+}
+function renderInicio() {
+  const bots = allBots();
+  const nBots = bots.filter(x => !/^pi-agent/.test(x.b.unit)).length;
+  setTop(`<div class="top"><div class="t"><h1>Pi Monitor</h1><span class="sub">${pis.length} Raspberry · ${nBots} bots${NATIVE ? ' · por Tailscale' : ''}</span></div>
+    <button class="ib" aria-label="Actualizar" onclick="toast('Actualizando…',1000);refreshAll()">${ICO.refresh}</button>
+    <button class="ib" aria-label="Notificaciones y ajustes" onclick="openSettings()">${ICO.bell}${pis.some(p => health(cache[p.id]).lvl === 'bad') ? '<span class="badge-dot" style="background:var(--bad)"></span>' : ''}</button></div>`);
+  if (!pis.length) {
+    $('#view').innerHTML = `<div class="empty"><p>Aún no has añadido ninguna Raspberry.</p><button class="btn pri" onclick="openForm()">Añadir Raspberry</button></div>`;
+    return;
+  }
+  const activos = bots.filter(x => botOn(x.b)).length;
+  const aviso = bots.filter(x => ['bad', 'warn'].includes(botState(x.b).lvl)).length;
+  const t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  const hoy = allEvents().filter(e => e.ts * 1000 >= t0).length;
+  const iss = topIssue();
+  $('#view').innerHTML = `
+    <div class="tiles">
+      <div class="tile"><b class="g">${activos}</b><span>bots activos</span></div>
+      <div class="tile"><b class="${aviso ? 'w' : ''}">${aviso}</b><span>con aviso</span></div>
+      <div class="tile"><b>${hoy}</b><span>eventos hoy</span></div>
+    </div>
+    ${iss ? `<button class="banner ${iss.lvl === 'bad' ? 'bad' : ''}" onclick="${iss.go}">${ICO.warn}<span class="bt"><b>${esc(iss.t)}</b><span>${esc(iss.d)}</span></span>${ICO.chev}</button>` : ''}
+    ${pis.map(piCard).join('')}
+    <button class="dashed" onclick="openForm()">+ Añadir Raspberry</button>`;
+}
+
+async function toggleBot(piId, unit) {
+  const pi = piById(piId), b = (st(piId)?.bots || []).find(x => x.unit === unit); if (!b) return;
+  const on = botOn(b), key = piId + '|' + unit;
+  if (on && !confirm(`¿Desactivar ${b.label}?\n\nSe parará y no volverá a ejecutarse (ni al reiniciar la Pi) hasta que lo actives.`)) return;
+  busy.add(key); render();
+  try {
+    const r = await post(pi, '/api/action', { action: on ? 'off' : 'on', unit }, 90000);
+    if (r.code !== 0) toast('Error: ' + r.output, 4500); else toast(`${b.label} ${on ? 'desactivado' : 'activado'}`);
+  } catch (e) { toast('Error: ' + e.message, 4500) }
+  busy.delete(key);
+  await refreshOne(pi); render();
+}
+
+// ================================================================ FEED
+let feedCat = 'todos';
+function renderFeed() {
+  setTop(`<div class="top"><div class="t"><h1>Feed</h1><span class="sub">Todo lo que han detectado tus bots</span></div>
+    <button class="ib" aria-label="Actualizar" onclick="toast('Actualizando…',1000);refreshAll()">${ICO.refresh}</button></div>`);
+  const list = allEvents().map(e => ({ e, v: evView(e) }));
+  const present = new Set(list.map(x => x.v.cat));
+  const chips = [['todos', 'Todos'], ...Object.entries(CATS).filter(([k]) => present.has(k)).map(([k, v]) => [k, v[0]])];
+  if (!chips.some(c => c[0] === feedCat)) feedCat = 'todos';
+  const shown = list.filter(x => feedCat === 'todos' || x.v.cat === feedCat).slice(0, 300);
+  let html = `<div class="chips" role="group" aria-label="Filtrar">${chips.map(([k, t]) => `<button class="chip ${k === feedCat ? 'on' : ''}" aria-pressed="${k === feedCat}" onclick="feedCat='${k}';render()">${esc(t)}</button>`).join('')}</div>`;
+  if (!shown.length) html += `<div class="empty"><p>${list.length ? 'Nada en esta categoría.' : 'Todavía no hay eventos. Aparecerán aquí cuando tus bots o tus Pi avisen de algo.'}</p></div>`;
+  let last = '';
+  for (const { e, v } of shown) {
+    const g = dayLabel(e.ts);
+    if (g !== last) { html += `<div class="grp">${g}</div>`; last = g }
+    const b = e.bot && (st(e.pi.id)?.bots || []).find(x => x.label === e.bot);
+    const onclick = b ? `go('bot',{pi:'${e.pi.id}',unit:'${jsq(b.unit)}'})` : `go('pi',{pi:'${e.pi.id}'})`;
+    html += `<button class="ev" onclick="${onclick}"><span class="tag c-${v.cat}">${esc(v.tag)}</span>
+      <span class="b"><span class="meta"><span>${esc(v.who)} · ${esc(e.pi.name)}</span><span>${hhmm(e.ts)}</span></span>
+      <span class="ti">${esc(v.title)}</span>${v.detail ? `<span class="de">${esc(v.detail)}</span>` : ''}</span></button>`;
+  }
+  $('#view').innerHTML = html;
+}
+
+// ================================================================ RESUMEN
+const resumenes = {};
+async function loadResumen(fecha) {
+  const r = await Promise.all(pis.map(async pi => { try { return { pi, r: await api(pi, '/api/resumen?fecha=' + fecha, {}, 10000) } } catch (e) { return { pi, error: e.message } } }));
+  resumenes[fecha] = { at: Date.now(), items: r };
+  if (route.v === 'resumen') render();
+}
+function shiftDay(f, n) { const [y, m, d] = f.split('-').map(Number); const x = new Date(y, m - 1, d); x.setDate(x.getDate() + n); return ymd(x) }
+function renderResumen() {
+  const fecha = route.fecha || todayStr(), isToday = fecha === todayStr();
+  setTop(`<div class="top" style="align-items:flex-end"><div class="t"><span class="sub">${fechaLarga(fecha)}</span><h1>Resumen del día</h1></div>
+    <div style="display:flex;gap:4px">
+      <button class="ib" style="width:40px;height:40px" aria-label="Día anterior" onclick="route.fecha='${shiftDay(fecha, -1)}';render();loadResumen(route.fecha)">${ICO.back.replace(/22/g, '18')}</button>
+      <button class="ib" style="width:40px;height:40px;${isToday ? 'opacity:.4' : ''}" aria-label="Día siguiente" ${isToday ? 'disabled' : ''} onclick="route.fecha='${shiftDay(fecha, 1)}';render();loadResumen(route.fecha)">${ICO.chev.replace(/16/g, '18')}</button></div></div>`);
+  const R = resumenes[fecha];
+  if (!R) { $('#view').innerHTML = `<p class="mut" style="padding:20px 4px">Cargando…</p>`; return }
+  const ok = R.items.filter(x => x.r);
+  const tot = ok.reduce((a, x) => a + x.r.eventos_bots, 0), fallos = ok.reduce((a, x) => a + x.r.fallos, 0), rein = ok.reduce((a, x) => a + x.r.reinicios, 0);
+  const cats = {};
+  for (const x of ok) for (const b of x.r.por_bot) {
+    const c = cats[catOf(b.cat)] ||= { n: 0, bots: [], ult: [] };
+    c.n += b.eventos; c.bots.push(`${b.bot} (${b.eventos})`); c.ult.push(...b.ultimos);
+  }
+  const ordered = Object.entries(cats).sort((a, b) => b[1].n - a[1].n);
+  const top = ordered.slice(0, 2).map(([, c]) => c.ult[c.ult.length - 1]).filter(Boolean);
+  const frase = ok.length ? `${tot} eventos${fallos ? `, ${fallos} ${fallos === 1 ? 'fallo' : 'fallos'}` : ', sin fallos'}${rein ? `, ${rein} ${rein === 1 ? 'reinicio' : 'reinicios'}` : ''}.${top.length ? ' Lo último: ' + top.join(' · ') + '.' : ''}` : 'No se ha podido contactar con ninguna Pi.';
+  let html = `<section class="card okc" style="gap:6px"><span class="lab" style="color:var(--ok-txt)">En una frase</span><p class="big">${esc(frase)}</p></section>`;
+  for (const [cat, c] of ordered) html += `<section class="card sm" style="gap:8px">
+      <div class="kv"><span style="display:flex;align-items:center;gap:10px;color:var(--txt)"><span class="tag s c-${cat}">${CATS[cat][1]}</span><b style="font-size:16px;font-weight:600">${CATS[cat][0]}</b></span><span class="mono" style="font-size:18px">${c.n}</span></div>
+      <span class="mut" style="color:var(--mut2)">${esc(c.bots.join(' · '))}</span>
+      ${c.ult.length ? `<span class="note">${esc(c.ult.slice(-3).join(' · '))}</span>` : ''}</section>`;
+  if (!ordered.length && ok.length) html += `<section class="card sm"><span class="mut">Ningún bot ha mandado eventos ${isToday ? 'hoy' : 'ese día'}. Los bots empezarán a aparecer aquí cuando usen pihub (fase 2).</span></section>`;
+  html += `<section class="card sm"><h2>Salud del homelab</h2>${R.items.map(x => x.r ? `
+      <div class="kv"><span>${esc(x.pi.name)}</span><span class="mono" style="font-size:13px">${x.r.salud.temp_max != null ? `<span class="${x.r.salud.temp_max >= 70 ? 'w' : ''}">${Math.round(x.r.salud.temp_max)}° máx</span>` : '– °'} · ${x.r.fallos} fallos · ${x.r.reinicios} reinicios</span></div>`
+      : `<div class="kv"><span>${esc(x.pi.name)}</span><span class="r" style="font-size:13px">${esc(x.error)}</span></div>`).join('')}</section>
+    <div class="kv" style="min-height:52px;padding:0 4px"><span>Notificación diaria</span><button class="box" style="padding:0 12px" onclick="openSettings()">${settings.resumen.activo ? esc(settings.resumen.hora) : 'desactivada'}</button></div>`;
+  $('#view').innerHTML = html;
+}
+
+// ================================================================ DETALLE DE PI
+async function loadHist(piId, rango) {
+  const pi = piById(piId); if (!pi) return;
+  try { hist[piId + rango] = { at: Date.now(), data: await api(pi, '/api/historial?rango=' + rango, {}, 12000) } }
+  catch (e) { hist[piId + rango] = { at: Date.now(), error: e.message } }
+  if (route.v === 'pi') render();
+}
+async function loadDisco(piId) {
+  const pi = piById(piId); if (!pi) return;
+  try { disco[piId] = await api(pi, '/api/disco', {}, 10000) } catch (e) { disco[piId] = { error: e.message } }
+  if (route.v === 'pi') render();
+}
+function bucket(points, n, rango) {
+  if (!points.length) return [];
+  const t1 = Date.now() / 1000, span = rango === '7d' ? 7 * 86400 : 86400, t0 = t1 - span, w = span / n;
+  const out = Array.from({ length: n }, () => []);
+  for (const p of points) { const i = Math.floor((p[0] - t0) / w); if (i >= 0 && i < n) out[i].push(p) }
+  return out;
+}
+function chart(title, unit, buckets, idx, lo, hi, warnAt, color, agg) {
+  const vals = buckets.map(b => { const v = b.map(p => p[idx]).filter(x => x != null); return v.length ? (agg === 'max' ? Math.max(...v) : v.reduce((a, c) => a + c, 0) / v.length) : null });
+  const real = vals.filter(v => v != null);
+  if (!real.length) return `<section class="card sm chart"><div class="hd"><h2>${title}</h2><span>sin datos todavía</span></div><div class="note">El agente guarda una muestra cada 5 minutos: en un rato verás la gráfica.</div></section>`;
+  const now = real[real.length - 1], mx = Math.max(...real);
+  const bars = vals.map(v => v == null ? `<i style="background:transparent"></i>` : `<i style="height:${Math.max(3, Math.round((Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo) * 64))}px;background:${v >= warnAt ? '#F59E0B' : color}"></i>`).join('');
+  return `<section class="card sm chart" style="gap:10px"><div class="hd"><h2>${title}</h2><span>ahora <b>${Math.round(now)}${unit}</b> · máx ${Math.round(mx)}${unit}</span></div>
+    <div class="bars" role="img" aria-label="Gráfica de ${title}: ahora ${Math.round(now)}${unit}, máximo ${Math.round(mx)}${unit}">${bars}</div>
+    <div class="axis"><span>${route.rango === '7d' ? 'hace 7 días' : 'hace 24 h'}</span><span>ahora</span></div></section>`;
+}
+const DISK_COL = ['#F59E0B', '#93C5FD', '#D8B4FE', '#86EFAC', '#FDBA74', '#F9A8D4', '#67E8F9'];
+function diskCard(piId, s) {
+  const d = disco[piId];
+  const pct = s.disk.percent, lim = d?.aviso || settings.alerts.disk || 90, full = pct >= Math.min(lim, 85);
+  let inner;
+  if (!d || d.calculando) inner = `<span class="note">Calculando cuánto ocupa cada bot (tarda unos minutos tras arrancar el agente)…</span>`;
+  else if (d.error) inner = `<span class="note">${esc(d.error)}</span>`;
+  else {
+    const items = d.items.filter(i => i.bytes), sys = items.find(i => i.nombre === 'sistema y otros');
+    const rest = items.filter(i => i !== sys);
+    const col = i => i === sys ? '#9AA8A1' : DISK_COL[rest.indexOf(i) % DISK_COL.length];
+    inner = `<div class="stack">${items.map(i => `<span style="width:${(100 * i.bytes / d.total).toFixed(2)}%;background:${col(i)}"></span>`).join('')}</div>
+      <div class="leg">${items.map(i => `<div><span><i style="background:${col(i)}"></i>${esc(i.nombre)}</span><span class="mono">${fmtB(i.bytes)}</span></div>`).join('')}</div>
+      <div class="note">Calculado ${agoS(Date.now() / 1000 - d.ts)} · <button class="btn sm" style="min-height:28px;padding:0 8px;font-weight:500" onclick="recalcDisco('${piId}')">Recalcular</button></div>`;
+  }
+  return `<section class="card sm ${full ? 'warnc' : ''}" style="gap:10px">
+    <div class="kv"><h2>${full ? 'SD casi llena' : 'Tarjeta SD'}</h2><span class="mono" style="font-size:13px;${full ? 'color:var(--warn-txt)' : ''}">${fmtGB(s.disk.used)} / ${fmtGB(s.disk.total)} · ${Math.round(pct)} %</span></div>
+    ${inner}
+    <div class="kv" style="border-top:1px solid ${full ? 'var(--warn-line)' : 'var(--line)'};padding-top:8px"><span>Avisar a partir de</span><button class="box" style="padding:0 10px" onclick="openSettings()">${esc(lim)} %</button></div></section>`;
+}
+async function recalcDisco(piId) { try { await post(piById(piId), '/api/disco/recalcular', {}); toast('Recalculando… tardará unos minutos') } catch (e) { toast('Error: ' + e.message) } }
+
+function renderPi() {
+  const pi = piById(route.pi); if (!pi) return back();
+  const c = cache[pi.id], h = health(c), s = c?.status, rango = route.rango || '24h';
+  setTop(topBack('Inicio'));
+  let html = `<div class="ttl"><h1>${esc(pi.name)}</h1><div class="pills">
+    <span class="pill ${s ? (h.lvl === 'ok' ? 'ok' : h.lvl) : 'bad'}">${s ? 'Online · up ' + fmtUp(s.uptime) : 'Sin conexión'}</span>
+    ${s ? `<span class="pill ln">${esc((s.model || '').replace(/^Raspberry Pi /, 'Pi ').replace(/ Model /, ' ').replace(/ Rev [\d.]+$/, '') || s.hostname)} · ${(s.bots || []).length} bots</span><span class="pill ln mono">agente v${esc(s.agent_version)}</span>` : ''}</div></div>`;
+  if (h.reasons.length && (h.lvl !== 'ok')) html += `<section class="card sm"><ul class="reasons">${h.reasons.map(x => `<li class="${x.l}">• ${esc(x.t)}</li>`).join('')}</ul></section>`;
+  if (!s) { $('#view').innerHTML = html + `<button class="btn" onclick="openForm('${pi.id}')">Editar conexión</button>`; return }
+  const H = hist[pi.id + rango];
+  html += `<div class="seg" role="group" aria-label="Rango">${[['24h', '24 horas'], ['7d', '7 días']].map(([k, t]) => `<button class="${k === rango ? 'on' : ''}" aria-pressed="${k === rango}" onclick="route.rango='${k}';render();loadHist('${pi.id}','${k}')">${t}</button>`).join('')}</div>`;
+  if (!H) html += `<p class="mut" style="margin:0 4px">Cargando gráficas…</p>`;
+  else if (H.error) html += `<section class="card sm"><span class="note">${esc(H.error)}</span></section>`;
+  else {
+    const B = bucket(H.data.puntos, rango === '7d' ? 42 : 48, rango);
+    html += chart('Temperatura', '°', B, 1, 30, 85, Math.min(70, settings.alerts.temp || 75), '#4ADE80', 'max')
+         + chart('CPU', '%', B, 2, 0, 100, 85, '#93C5FD')
+         + chart('RAM', '%', B, 3, 0, 100, 92, '#D8B4FE');
+  }
+  html += diskCard(pi.id, s);
+  html += `<h2 class="sec-t">Acciones rápidas</h2><div class="acts two">
+    <button class="act" onclick="powerAction('${pi.id}','reboot')">${ICO.refresh}Reiniciar Pi</button>
+    <button class="act bad" onclick="powerAction('${pi.id}','poweroff')">${ICO.power}Apagar Pi</button>
+    <button class="act" onclick="openTailscale('${pi.id}')">${ICO.net}Tailscale</button>
+    <button class="act" onclick="limpiarLogs('${pi.id}')">${ICO.trash}Limpiar logs</button>
+    <button class="act" onclick="openTerminal('${pi.id}')" ${s.allow_exec ? '' : 'disabled'}>${ICO.term}Terminal</button>
+    <button class="act" onclick="openLogs('${pi.id}','')">${ICO.list}Logs</button></div>`;
+  html += `<section class="card"><div class="kv"><h2>Bots</h2><button class="btn sm" onclick="addBot('${pi.id}')">+ Añadir</button></div>
+    ${(s.bots || []).length ? s.bots.map(b => botRow(pi, b)).join('') : '<span class="mut">Esta Pi aún no tiene bots.</span>'}</section>`;
+  html += `<section class="card"><div class="kv"><h2>Servicios vigilados</h2><button class="btn sm" onclick="openPicker('${pi.id}','service')">+ Vigilar</button></div>
+    ${s.services.length ? s.services.map(v => { const l = v.ActiveState === 'active' ? 'ok' : v.ActiveState === 'failed' ? 'bad' : 'warn'; return `<div class="svc"><span class="dot sm ${l}"></span><div class="n"><b>${esc(v.name)}</b><div class="mut">${esc(v.ActiveState)}${v.SubState ? ' · ' + esc(v.SubState) : ''}</div></div>
+      <div class="bt"><button class="btn sm" onclick="svcAction('${pi.id}','restart','${jsq(v.name)}')">Reiniciar</button><button class="btn sm" onclick="openLogs('${pi.id}','${jsq(v.name)}')">Logs</button><button class="btn sm" aria-label="Dejar de vigilar ${esc(v.name)}" onclick="unwatch('${pi.id}','${jsq(v.name)}')">${ICO.x}</button></div></div>` }).join('') : '<span class="mut">No vigilas ningún servicio del sistema.</span>'}</section>`;
+  html += `<section class="card sm" style="gap:8px">
+    <div class="kv"><span>Host</span><span>${esc(s.hostname)}</span></div>
+    <div class="kv"><span>Sistema</span><span>${esc(s.os)}</span></div>
+    <div class="kv"><span>IPs</span><span class="mono" style="font-size:13px">${esc(s.ips.join(', '))}</span></div>
+    <div class="kv"><span>Alimentación</span><span>${!s.throttled.available ? 'n/d' : s.throttled.now ? '<span class="r">problema ahora</span>' : s.throttled.past ? '<span class="w">aviso desde el arranque</span>' : 'correcta'}</span></div>
+    <div class="kv"><span>Swap</span><span>${fmtB(s.memory.swap_used)} / ${fmtB(s.memory.swap_total)}</span></div>
+    <button class="btn" style="margin-top:6px" onclick="openForm('${pi.id}')">Editar conexión</button></section>`;
+  $('#view').innerHTML = html;
+}
+
+async function powerAction(piId, action) {
+  const pi = piById(piId), n = (st(piId)?.bots || []).length;
+  showModal(`<h2>¿${action === 'reboot' ? 'Reiniciar' : 'Apagar'} ${esc(pi.name)}?</h2>
+    <p>${action === 'reboot' ? `Sus ${n} bots se pararán unos 2 minutos y volverán a arrancar solos.` : 'No podrás encenderla desde la app: habrá que desenchufar y enchufar la fuente.'}</p>
+    <div class="row2"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn ${action === 'reboot' ? 'pri' : 'bad'}" onclick="doPower('${piId}','${action}')">${action === 'reboot' ? 'Reiniciar' : 'Apagar'}</button></div>`);
+}
+async function doPower(piId, action) {
+  closeModal();
+  try { await post(piById(piId), '/api/action', { action }); toast(action === 'reboot' ? 'Reiniciando… vuelve en ~1 min' : 'Apagando…', 4000) }
+  catch (e) { toast('Error: ' + e.message, 4000) }
+}
+async function openTailscale(piId) {
+  showModal(`<h2>Tailscale</h2><p>Consultando…</p>`);
+  try {
+    const t = await api(piById(piId), '/api/tailscale', {}, 12000);
+    if (!t.ok) return showModal(`<h2>Tailscale</h2><p class="r">${esc(t.error)}</p><div class="row2"><span></span><button class="btn" onclick="closeModal()">Cerrar</button></div>`);
+    const on = t.dispositivos.filter(d => d.online);
+    showModal(`<h2>Tailscale</h2>
+      <div class="col" style="gap:10px">
+        <div class="kv"><span>Estado</span><span class="${t.estado === 'Running' ? 'g' : 'w'}">${t.estado === 'Running' ? 'Conectado' : esc(t.estado)}</span></div>
+        <div class="kv"><span>IP</span><span class="mono">${esc(t.ips.join(', '))}</span></div>
+        <div class="kv"><span>Versión</span><span class="mono">${esc(t.version)}</span></div>
+        <div class="kv"><span>En línea</span><span>${on.length} de ${t.dispositivos.length} dispositivos</span></div>
+        ${t.dispositivos.map(d => `<div class="kv"><span style="display:flex;align-items:center;gap:8px"><span class="dot sm ${d.online ? 'ok' : 'off'}"></span>${esc(d.nombre)}</span><span class="mut">${esc(d.so || '')}</span></div>`).join('')}
+      </div><div class="row2"><span></span><button class="btn" onclick="closeModal()">Cerrar</button></div>`);
+  } catch (e) { showModal(`<h2>Tailscale</h2><p class="r">${esc(e.message)}</p><div class="row2"><span></span><button class="btn" onclick="closeModal()">Cerrar</button></div>`) }
+}
+function limpiarLogs(piId) {
+  showModal(`<h2>¿Limpiar logs antiguos?</h2><p>Se borrarán los logs del sistema de más de 7 días en ${esc(piById(piId).name)}. Tus bots y sus datos no se tocan.</p>
+    <div class="row2"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn" style="background:var(--warn);border-color:var(--warn);color:var(--bg)" onclick="doLimpiar('${piId}')">Limpiar</button></div>`);
+}
+async function doLimpiar(piId) {
+  showModal(`<h2>Limpiando…</h2>`);
+  try { const r = await post(piById(piId), '/api/limpiar-logs', { dias: 7 }, 130000); showModal(`<h2>Logs limpiados</h2><pre>${esc(r.output)}</pre><div class="row2"><span></span><button class="btn" onclick="closeModal()">Cerrar</button></div>`) }
+  catch (e) { showModal(`<h2>No se pudo</h2><p class="r">${esc(e.message)}</p><div class="row2"><span></span><button class="btn" onclick="closeModal()">Cerrar</button></div>`) }
+}
+async function svcAction(piId, action, unit, label) {
+  const name = label || unit;
+  toast(`${{ restart: 'Reiniciando', start: 'Arrancando', stop: 'Parando' }[action]} ${name}…`);
+  try { const r = await post(piById(piId), '/api/action', { action, unit }, 65000); toast(r.code === 0 ? `${name}: ${r.service.ActiveState === 'active' ? 'activo' : r.service.ActiveState}` : 'Error: ' + r.output, 4000) }
+  catch (e) { toast('Error: ' + e.message, 4000) }
+  await refreshOne(piById(piId)); render();
+  if (route.v === 'bot') loadBotLog(route.pi, route.unit);
+}
+async function setServices(piId, list) {
+  try { await post(piById(piId), '/api/services', { services: list }); await refreshOne(piById(piId)); render() }
+  catch (e) { toast('Error: ' + e.message) }
+}
+function unwatch(piId, u) { const s = st(piId); if (s) setServices(piId, s.services.map(v => v.name).filter(n => n !== u)) }
+
+// ---------------- logs y terminal
+function openLogs(piId, unit) {
+  const s = st(piId), opts = s ? [...(s.bots || []).map(b => [b.unit, 'Bot: ' + b.label]), ...s.services.map(v => [v.name, v.name])] : [];
+  showModal(`<h2>Logs</h2>
+    <label class="f" for="lunit">Qué ver</label>
+    <select id="lunit"><option value="">Todo el sistema</option><option value="!err">Solo errores (desde el arranque)</option>${opts.map(([u, t]) => `<option value="${esc(u)}" ${u === unit ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
+    <label class="f" for="ln">Líneas</label>
+    <select id="ln"><option>50</option><option selected>150</option><option>500</option></select>
+    <div class="row2"><button class="btn" onclick="closeModal()">Cerrar</button><button class="btn pri" onclick="loadLogs('${piId}')">Ver logs</button></div>
+    <pre id="lout">Pulsa «Ver logs».</pre>`);
+  if (unit) loadLogs(piId);
+}
+async function loadLogs(piId) {
+  const v = $('#lunit').value, n = $('#ln').value;
+  const q = v === '!err' ? `?priority=err&n=${n}` : `?unit=${encodeURIComponent(v)}&n=${n}`;
+  $('#lout').textContent = 'Cargando…';
+  try { const r = await api(piById(piId), '/api/logs' + q, {}, 20000); $('#lout').textContent = r.output || '(vacío)'; $('#lout').scrollTop = 1e9 }
+  catch (e) { $('#lout').textContent = 'Error: ' + e.message }
+}
+const QUICK = ['uptime', 'df -h', 'free -h', 'vcgencmd measure_temp', 'vcgencmd get_throttled', 'systemctl --failed', 'tailscale status', 'ps aux --sort=-%cpu | head -n 8', 'journalctl -p err -b -n 30 --no-pager', 'ls ~'];
+function openTerminal(piId) {
+  const hst = store.get('pimon.hist.' + piId, []);
+  showModal(`<h2>Terminal · ${esc(piById(piId).name)}</h2>
+    <form onsubmit="event.preventDefault();runCmd('${piId}')" style="display:flex;gap:8px;margin-top:8px">
+      <input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Comando, p. ej. ls ~" style="font-family:var(--mono)" aria-label="Comando">
+      <button class="btn pri" id="runbtn" aria-label="Ejecutar">${ICO.play}</button></form>
+    <div class="qk">${QUICK.map(q => `<button onclick="$('#cmd').value=this.textContent;$('#cmd').focus()">${esc(q)}</button>`).join('')}</div>
+    ${hst.length ? `<label class="f">Recientes</label><div class="qk">${hst.map(q => `<button onclick="$('#cmd').value=this.textContent;$('#cmd').focus()">${esc(q)}</button>`).join('')}</div>` : ''}
+    <p class="note">Se ejecuta como tu usuario en la Pi. Máx. 30 s por comando; nada interactivo (usa -y en apt).</p>
+    <pre id="tout" style="display:none"></pre>
+    <div class="row2"><span></span><button class="btn" onclick="closeModal()">Cerrar</button></div>`);
+}
+async function runCmd(piId) {
+  const cmd = $('#cmd').value.trim(); if (!cmd) return;
+  store.set('pimon.hist.' + piId, [cmd, ...store.get('pimon.hist.' + piId, []).filter(h => h !== cmd)].slice(0, 8));
+  const out = $('#tout'); out.style.display = ''; out.textContent = '$ ' + cmd + '\n…'; $('#runbtn').disabled = true;
+  try {
+    const r = await post(piById(piId), '/api/exec', { cmd }, 40000);
+    out.textContent = `$ ${cmd}\n${r.stdout}${r.stderr ? (r.stdout ? '\n' : '') + r.stderr : ''}\n[código ${r.code} · ${r.seconds}s]`;
+  } catch (e) { out.textContent = `$ ${cmd}\nError: ${e.message}` }
+  $('#runbtn').disabled = false; $('#cmd').value = ''; $('#cmd').focus();
+}
+
+// ================================================================ DETALLE DE BOT
+const botLogs = {};
+const horDraft = {};
+async function loadVersion(piId, unit) {
+  const k = piId + '|' + unit;
+  try { vers[k] = await api(piById(piId), '/api/bots/version?unit=' + encodeURIComponent(unit), {}, 15000) } catch (e) { vers[k] = { git: false, error: e.message } }
+  if (route.v === 'bot') render();
+}
+async function loadBotLog(piId, unit) {
+  try { const r = await api(piById(piId), `/api/logs?unit=${encodeURIComponent(unit)}&n=40`, {}, 15000); botLogs[piId + '|' + unit] = r.output } catch (e) { botLogs[piId + '|' + unit] = 'Error: ' + e.message }
+  if (route.v === 'bot') render();
+}
+function curBot() { return (st(route.pi)?.bots || []).find(b => b.unit === route.unit) }
+
+function renderBot() {
+  const pi = piById(route.pi); if (!pi) return back();
+  const b = curBot();
+  setTop(topBack(pi.name));
+  if (!b) { $('#view').innerHTML = `<p class="mut" style="padding:20px 4px">${st(pi.id) ? 'Este bot ya no está en la Pi.' : 'Cargando…'}</p>`; return }
+  const s = botState(b), on = botOn(b), k = pi.id + '|' + b.unit, running = ['active', 'activating'].includes(b.ActiveState);
+  const isNew = b.activado !== undefined, ad = botAddr(pi, b);
+  let html = `<div class="ttl"><h1>${esc(b.label)}</h1><div class="pills">
+    <span class="pill ${s.lvl === 'idle' || s.lvl === 'off' ? '' : s.lvl}">${esc(s.pill)}</span>
+    ${ad ? (ad.href ? `<a class="pill ln mono" style="color:var(--blue-txt);border-color:var(--blue-line)" href="${esc(ad.href)}" target="_blank" rel="noopener">${esc(ad.label)}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg></a>` : `<span class="pill ln mono">${esc(ad.label)}</span>`) : ''}
+    <span class="pill ln mono">${esc(b.unit)}</span></div></div>
+    <div class="acts">
+      ${running ? `<button class="act" onclick="svcAction('${pi.id}','restart','${jsq(b.unit)}','${jsq(b.label)}')" ${on ? '' : 'disabled'}>${ICO.refresh}Reiniciar</button>`
+                : `<button class="act ok" onclick="svcAction('${pi.id}','start','${jsq(b.unit)}','${jsq(b.label)}')" ${on ? '' : 'disabled'}>${ICO.play}${b.timer ? 'Ejecutar ya' : 'Arrancar'}</button>`}
+      <button class="act" onclick="openLogs('${pi.id}','${jsq(b.unit)}')">${ICO.list}Logs</button>
+      <button class="act ${on ? 'bad' : 'ok'} ${busy.has(k) ? 'busy' : ''}" onclick="toggleBot('${pi.id}','${jsq(b.unit)}')" ${busy.has(k) ? 'disabled' : ''}>${ICO.power}${on ? 'Desactivar' : 'Activar'}</button>
+    </div>`;
+  // estado
+  const evB = (evs[pi.id]?.list || []).filter(e => e.bot === b.label).slice(-14);
+  html += `<section class="card" style="gap:10px">
+    ${b.ActiveState === 'active' ? `<div class="kv"><span>En marcha desde</span><span class="mono">${esc(fmtTs(b.ActiveEnterTimestamp) || '–')}</span></div>` : `<div class="kv"><span>Parado desde</span><span class="mono">${esc(fmtTs(b.InactiveEnterTimestamp) || '–')}</span></div>`}
+    ${b.timer ? `<div class="kv"><span>Próxima</span><span class="mono">${esc(fmtTs(b.timer.next) || '–')}</span></div>` : ''}
+    ${isNew ? `<div class="kv"><span>Reinicios hoy</span><span class="mono ${b.reinicios_hoy >= b.max_restarts ? 'r' : ''}">${b.reinicios_hoy}/${b.max_restarts}</span></div>` : `<div class="kv"><span>Reinicios</span><span class="mono">${esc(b.NRestarts || 0)}</span></div>`}
+    <div class="kv"><span>Arranca con la Pi</span><span>${on ? 'sí' : 'no'}</span></div>
+    ${isNew ? `<div class="kv"><span>Dirección</span><span style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-size:13px">${ad ? esc(ad.label) + `<span class="mut"> · ${ad.manual ? 'a mano' : 'detectada'}</span>` + (ad.otros.length ? `<span class="mut"> (+${ad.otros.join(', ')})</span>` : '') : '<span class="mut">no escucha en ningún puerto</span>'}</span><button class="btn sm" style="min-height:30px;padding:0 10px;flex:none;white-space:nowrap" onclick="setPuerto()">Cambiar</button></span></div>` : ''}
+    ${evB.length ? `<div class="sep"></div><span class="mut">Últimos eventos</span>${evB.slice(-4).reverse().map(e => `<div class="kv"><span style="color:var(--txt);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(evView({ ...e, pi }).title)}</span><span class="mono" style="font-size:12px;color:var(--mut);flex:none">${hhmm(e.ts)}</span></div>`).join('')}` : ''}
+  </section>`;
+  if (isNew) {
+    // horario
+    const hz = horDraft[k] || (horDraft[k] = { horas: [...(b.horario?.horas || [])], dias: b.horario?.dias ? [...b.horario.dias] : [0, 1, 2, 3, 4, 5, 6], dirty: false });
+    html += `<section class="card"><div class="kv"><h2>Horario</h2>${hz.dirty ? `<button class="btn sm pri" onclick="saveHorario()">Guardar</button>` : `<span class="note">${b.horario?.horas?.length ? 'guardado' : 'sin horario'}</span>`}</div>
+      <div class="wrap">${hz.horas.map((h, i) => `<span class="box">${esc(h)}<button aria-label="Quitar ${esc(h)}" onclick="horDel(${i})">${ICO.x}</button></span>`).join('')}
+        <input type="time" id="hnew" aria-label="Hora nueva" value="09:00"><button class="btn sm" onclick="horAdd()">+ Añadir hora</button></div>
+      <div class="days" role="group" aria-label="Días">${['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d, i) => `<button class="${hz.dias.includes(i) ? 'on' : ''}" aria-pressed="${hz.dias.includes(i)}" aria-label="${DIAS[i]}" onclick="horDia(${i})">${d}</button>`).join('')}</div>
+      ${b.latido == null ? `<span class="note">Este bot aún no lee el horario de la app: lo hará cuando use pihub (fase 2). Mientras tanto sigue con su horario de siempre.</span>` : ''}
+    </section>`;
+    // vigilancia
+    const hangOpts = [0, 5, 10, 15, 30, 60, 120, 360];
+    html += `<section class="card" style="gap:10px"><h2>Vigilancia</h2>
+      <div class="kv"><span>Señal de vida</span><span class="mono" style="display:flex;align-items:center;gap:6px">${b.latido_hace != null ? `<span class="dot sm ${b.colgado ? 'warn' : 'ok'}"></span>${agoS(b.latido_hace)}` : '<span class="mut">nunca la ha mandado</span>'}</span></div>
+      <div class="kv"><span>Colgado si calla más de</span><select class="inl" aria-label="Minutos para considerarlo colgado" onchange="setAjuste('hang_after',+this.value)">${hangOpts.map(m => `<option value="${m}" ${m === b.hang_after ? 'selected' : ''}>${m ? (m >= 60 ? m / 60 + ' h' : m + ' min') : 'no vigilar'}</option>`).join('')}</select></div>
+      <div class="sep"></div>
+      <label class="chk"><span><span>Autorreinicio</span><small>Si falla o se cuelga, lo reinicio solo</small></span><input type="checkbox" ${b.autorestart ? 'checked' : ''} onchange="setAjuste('autorestart',this.checked)"></label>
+      <div class="kv"><span>Máximo de reinicios al día</span><select class="inl" aria-label="Máximo de reinicios al día" onchange="setAjuste('max_restarts',+this.value)">${[1, 2, 3, 5, 10].map(m => `<option ${m === b.max_restarts ? 'selected' : ''}>${m}</option>`).join('')}</select></div>
+      <div class="kv"><span>Categoría en el feed</span><select class="inl" aria-label="Categoría" onchange="setAjuste('cat',this.value)">${Object.entries(CATS).filter(([c]) => c !== 'sistema').map(([c, v]) => `<option value="${c}" ${c === b.cat ? 'selected' : ''}>${v[0]}</option>`).join('')}</select></div>
+    </section>`;
+    // versión
+    const v = vers[k];
+    html += `<section class="card" style="gap:10px"><div class="kv"><h2>Versión</h2><span class="mono" style="font-size:13px;color:${v?.pendientes ? 'var(--blue-txt)' : v?.git ? 'var(--ok-txt)' : 'var(--mut)'}">${!v ? '…' : v.git ? esc(v.version) + (v.pendientes ? ` · hay ${esc(v.version_remota)}` : v.pendientes === 0 ? ' · al día' : '') : 'sin git'}</span></div>
+      ${!v ? '' : v.git ? `<span class="note mono">${esc(v.ruta)}${v.fecha ? ' · ' + new Date(v.fecha * 1000).toLocaleDateString('es-ES') : ''}${v.error_upstream ? ' · ' + esc(v.error_upstream) : ''}</span>
+        <button class="btn blue full" onclick="${v.pendientes ? `updateBot()` : `checkUpdates()`}" style="display:flex;align-items:center;justify-content:center;gap:8px">${ICO.down}${v.pendientes ? 'Actualizar a ' + esc(v.version_remota) : 'Buscar actualizaciones'}</button>`
+        : `<span class="note">${esc(v.error || '')}. Para poder actualizarlo desde aquí, la carpeta del bot tiene que ser un repositorio git.</span>`}
+    </section>`;
+  }
+  // log
+  const lg = botLogs[k];
+  html += `<section style="display:flex;flex-direction:column;gap:8px"><div class="kv" style="padding:0 4px"><h2 class="sec-t" style="margin:0">Log</h2><button class="btn sm" onclick="loadBotLog('${pi.id}','${jsq(b.unit)}')">Actualizar</button></div>
+    <pre class="log" id="blog">${esc(lg == null ? 'Cargando…' : lg || '(vacío)')}</pre></section>`;
+  // más
+  html += `<section class="card sm" style="gap:8px">
+    ${b.managed ? `<button class="btn" onclick="botForm('${pi.id}','${jsq(b.unit)}')">Editar comando y carpeta</button>` : ''}
+    ${b.managed ? `<button class="btn bad" onclick="botRemove('${pi.id}','${jsq(b.unit)}',true)">Borrar bot de la Pi</button>`
+                : `<button class="btn" onclick="botRemove('${pi.id}','${jsq(b.unit)}',false)">Quitar de la app (no borra el servicio)</button>`}
+  </section>`;
+  $('#view').innerHTML = html;
+  const lgEl = $('#blog'); if (lgEl) lgEl.scrollTop = 1e9;
+}
+function horDraftCur() { return horDraft[route.pi + '|' + route.unit] }
+function horAdd() { const v = $('#hnew').value, h = horDraftCur(); if (!/^\d\d:\d\d$/.test(v) || h.horas.includes(v)) return; h.horas = [...h.horas, v].sort(); h.dirty = true; render() }
+function horDel(i) { const h = horDraftCur(); h.horas.splice(i, 1); h.dirty = true; render() }
+function horDia(i) { const h = horDraftCur(); h.dias = h.dias.includes(i) ? h.dias.filter(d => d !== i) : [...h.dias, i].sort(); h.dirty = true; render() }
+async function saveHorario() {
+  const h = horDraftCur();
+  try { await post(piById(route.pi), '/api/bots/horario', { unit: route.unit, horas: h.horas, dias: h.dias }); h.dirty = false; toast('Horario guardado'); await refreshOne(piById(route.pi)); render() }
+  catch (e) { toast('Error: ' + e.message, 4000) }
+}
+async function setAjuste(k, v) {
+  try { await post(piById(route.pi), '/api/bots/ajustes', { unit: route.unit, [k]: v }); toast('Guardado', 1200); await refreshOne(piById(route.pi)); render() }
+  catch (e) { toast('Error: ' + e.message, 4000) }
+}
+function setPuerto() {
+  const b = curBot(), pi = piById(route.pi), det = (b.puertos || []);
+  showModal(`<h2>Dirección de ${esc(b.label)}</h2>
+    <p>${det.length ? `Detectado: escucha en ${det.map(p => `<b class="mono">${esc(pi.name)}:${p}</b>`).join(', ')}.` : 'No he detectado ningún puerto: puede que el bot no tenga panel web, o que solo escuche en la propia Pi.'}</p>
+    <label class="f" for="bport">Puerto (déjalo vacío para usar el detectado)</label>
+    <input id="bport" type="number" inputmode="numeric" min="1" max="65535" value="${esc(b.puerto || '')}" placeholder="${esc(det[0] || '8787')}" style="font-family:var(--mono)">
+    <div class="row2"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="closeModal();setAjuste('puerto',$('#bport').value?+$('#bport').value:null)">Guardar</button></div>`);
+}
+async function checkUpdates() {
+  toast('Buscando actualizaciones…', 1500);
+  const k = route.pi + '|' + route.unit;
+  try { vers[k] = await api(piById(route.pi), `/api/bots/version?unit=${encodeURIComponent(route.unit)}&fetch=1`, {}, 70000); toast(vers[k].pendientes ? 'Hay una versión nueva' : vers[k].error_fetch ? 'Error: ' + vers[k].error_fetch : 'Está al día', 3000) }
+  catch (e) { toast('Error: ' + e.message, 4000) }
+  render();
+}
+async function updateBot() {
+  const b = curBot(); if (!confirm(`¿Actualizar ${b.label}? Se descargará la versión nueva y se reiniciará el bot.`)) return;
+  toast('Actualizando…', 4000);
+  try {
+    const r = await post(piById(route.pi), '/api/bots/update', { unit: route.unit }, 200000);
+    toast(r.aviso || (r.cambiado ? `Actualizado a ${r.despues.version}` : 'No había cambios'), 4000);
+  } catch (e) { toast('Error: ' + e.message, 5000) }
+  await refreshOne(piById(route.pi)); loadVersion(route.pi, route.unit); loadBotLog(route.pi, route.unit);
+}
+
+// ---------------- alta, edición y baja de bots
+const SYS_RE = /^(systemd-|dbus|getty|serial-getty|cloud-|console-|keyboard-|alsa-|avahi|bluetooth|bthelper|cron|dphys|e2scrub|fake-hwclock|hciuart|ifup|kmod|modprobe|networking|NetworkManager|nfs|polkit|raspi-|rng-|rpi-|rsyslog|ssh|sshswitch|triggerhappy|udisks|user@|user-runtime|wpa_supplicant|apt-|man-db|logrotate|plymouth|ModemManager|dhcpcd|accounts-daemon|lightdm|rtkit|smbd|nmbd|samba|winbind|tailscaled|pi-agent|lvm2|setvtrgb|sudo|ufw|unattended|zram|wayvnc|colord|cups|packagekit|haveged|udev|chrony|ntp|initrd|emergency|rescue|nftables|iptables|glamor|regenerate|resize2fs|sys-|blk-|dmesg|fstrim|getty-static|kbd|lm-sensors|nmbd|quotaon|rc-local|rpcbind|ssh-|swap|thermald|upower|wtmpdb|x11-common|containerd|docker)/i;
+function addBot(piId) {
+  showModal(`<h2>Añadir bot</h2><div class="col">
+    <button class="btn pri" onclick="botForm('${piId}')">Crear a partir de mi script</button>
+    <p class="note">Indicas el comando (p. ej. <code>python3 main.py</code>) y la app crea el servicio en la Pi.</p>
+    <button class="btn" onclick="openPicker('${piId}','bot')">Usar un servicio que ya existe</button>
+    <p class="note">Por ejemplo, un bot que ya tengas instalado como servicio.</p>
+    <button class="btn" onclick="closeModal()">Cancelar</button></div>`);
+}
+async function openPicker(piId, mode) {
+  const title = mode === 'bot' ? 'Elegir el servicio del bot' : 'Vigilar servicio';
+  const pi = piById(piId); showModal(`<h2>${title}</h2><p>Cargando servicios…</p>`);
+  try {
+    const { units } = await api(pi, '/api/units', {}, 15000);
+    const s = st(piId);
+    const taken = new Set(mode === 'bot' ? (s?.bots || []).map(b => b.unit) : (s?.services || []).map(v => v.name));
+    const list = units.filter(u => !taken.has(u.name)).sort((a, b) => (b.active === 'active') - (a.active === 'active') || a.name.localeCompare(b.name));
+    const mine = mode === 'bot' ? list.filter(u => !SYS_RE.test(u.name)) : list;
+    const row = u => `<div class="svc" data-n="${esc((u.name + ' ' + u.description).toLowerCase())}"><span class="dot sm ${u.active === 'active' ? 'ok' : u.active === 'failed' ? 'bad' : ''}"></span>
+        <div class="n"><b>${esc(u.name)}</b><div class="mut">${esc(u.description)}</div></div><div class="bt"><button class="btn sm" onclick="pick('${piId}','${mode}','${jsq(u.name)}')">Elegir</button></div></div>`;
+    window._pickAll = list.map(row).join(''); window._pickMine = mine.map(row).join('');
+    showModal(`<h2>${title}</h2>
+      ${mode === 'bot' ? `<p class="note">Solo se muestran los servicios que no son del sistema. <button class="btn sm" style="min-height:28px" onclick="$('#pl').innerHTML=window._pickAll;this.remove()">Ver todos</button></p>` : ''}
+      <input id="pf" placeholder="Filtrar…" aria-label="Filtrar" oninput="document.querySelectorAll('#pl .svc').forEach(r=>r.style.display=r.dataset.n.includes(this.value.toLowerCase())?'':'none')">
+      <div id="pl">${(mode === 'bot' ? window._pickMine : window._pickAll) || '<p class="note">No hay servicios propios sin enlazar.</p>'}</div>
+      <label class="f" for="pm">…o escribe el nombre</label><div style="display:flex;gap:8px"><input id="pm" placeholder="mi-bot.service"><button class="btn" onclick="pick('${piId}','${mode}',$('#pm').value.trim())">Añadir</button></div>
+      <div class="row2"><span></span><button class="btn" onclick="closeModal()">Cerrar</button></div>`);
+  } catch (e) { showModal(`<h2>Error</h2><p>${esc(e.message)}</p><button class="btn" onclick="closeModal()">Cerrar</button>`) }
+}
+function pick(piId, mode, name) {
+  if (!name || !/^[A-Za-z0-9@._:-]+$/.test(name)) return toast('Nombre de servicio no válido');
+  if (!name.includes('.')) name += '.service';
+  if (mode === 'bot') return showModal(`<h2>Nombre del bot</h2><p class="mono">${esc(name)}</p>
+    <label class="f" for="bl">Nombre en la app</label><input id="bl" value="${esc(name.replace(/\.service$/, ''))}">
+    <label class="f" for="bc">Categoría en el feed</label><select id="bc">${Object.entries(CATS).filter(([c]) => c !== 'sistema').map(([c, v]) => `<option value="${c}" ${c === 'otros' ? 'selected' : ''}>${v[0]}</option>`).join('')}</select>
+    <div class="row2"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="linkBot('${piId}','${jsq(name)}')">Añadir</button></div>`);
+  closeModal(); setServices(piId, [...(st(piId)?.services.map(v => v.name) || []), name]);
+}
+async function linkBot(piId, unit) {
+  try { await post(piById(piId), '/api/bots/link', { unit, name: $('#bl').value.trim() || unit, cat: $('#bc').value }); closeModal(); toast('Bot añadido'); await refreshOne(piById(piId)); render() }
+  catch (e) { toast('Error: ' + e.message, 4000) }
+}
+function botForm(piId, unit) {
+  const b = unit ? (st(piId)?.bots || []).find(x => x.unit === unit) : null, d = b?.def || {};
+  const mode = d.schedule ? 'daily' : b ? (botOn(b) ? 'always' : 'manual') : 'always';
+  showModal(`<h2>${b ? 'Editar' : 'Nuevo'} bot</h2>
+    <label class="f" for="bname">Nombre</label><input id="bname" value="${esc(b?.label || '')}" placeholder="Instagram fútbol">
+    <label class="f" for="bcmd">Comando</label><input id="bcmd" value="${esc(d.command || '')}" autocapitalize="off" spellcheck="false" placeholder="python3 main.py" style="font-family:var(--mono)">
+    <label class="f" for="bwd">Carpeta del bot en la Pi</label><input id="bwd" value="${esc(d.workdir || '')}" autocapitalize="off" placeholder="/home/sergio/bots/instagram">
+    <label class="f" for="bmode">Cuándo se ejecuta</label>
+    <select id="bmode" onchange="$('#btimew').style.display=this.value==='daily'?'':'none'">
+      <option value="always">Siempre encendido (arranca con la Pi)</option>
+      <option value="daily">Una vez al día, a una hora</option>
+      <option value="manual">Solo cuando lo arranque yo</option></select>
+    <div id="btimew" style="display:${mode === 'daily' ? '' : 'none'}"><label class="f" for="btime">Hora (de la Pi)</label><input id="btime" type="time" value="${esc(d.schedule || '09:00')}"></div>
+    <label class="chk"><span>Si se cae por un error, reiniciarlo solo</span><input type="checkbox" id="brestart" ${d.restart === 'no' ? '' : 'checked'}></label>
+    <p id="bmsg" class="note"></p>
+    <div class="row2"><button class="btn" onclick="closeModal()">Cancelar</button><button class="btn pri" onclick="saveBot('${piId}','${b ? jsq(b.unit) : ''}')">Guardar</button></div>`);
+  $('#bmode').value = mode;
+}
+async function saveBot(piId, unit) {
+  const mode = $('#bmode').value;
+  const body = { unit: unit || undefined, name: $('#bname').value.trim(), command: $('#bcmd').value.trim(), workdir: $('#bwd').value.trim(),
+    schedule: mode === 'daily' ? $('#btime').value : '', autostart: mode === 'always', restart: $('#brestart').checked };
+  if (!body.name || !body.command) return $('#bmsg').textContent = 'Pon un nombre y el comando.';
+  $('#bmsg').textContent = 'Guardando…';
+  try { await post(piById(piId), '/api/bots/save', body, 60000); closeModal(); toast('Bot guardado'); await refreshOne(piById(piId)); render() }
+  catch (e) { $('#bmsg').innerHTML = `<span class="r">${esc(e.message)}</span>` }
+}
+async function botRemove(piId, unit, del) {
+  if (!confirm(del ? 'Se parará y se borrará el servicio del bot (tu script no se toca). ¿Seguro?' : '¿Quitar este bot de la app? El servicio sigue en la Pi.')) return;
+  try { await post(piById(piId), '/api/bots/remove', { unit, delete: del }, 60000); toast(del ? 'Bot borrado' : 'Quitado'); back() }
+  catch (e) { toast('Error: ' + e.message, 4000) }
+  await refreshOne(piById(piId)); render();
+}
+
+// ================================================================ AJUSTES Y NOTIFICACIONES
+function openSettings() {
+  const t = settings.telegram, a = settings.alerts, rz = settings.resumen, n = NATIVE ? nativeAjustes() : null;
+  const tg = `
+    <label class="f" for="stok">Token del bot de Telegram</label><input id="stok" value="${esc(t.token)}" autocapitalize="off" spellcheck="false" placeholder="123456789:AAH…">
+    <p class="note">Créalo con @BotFather → /newbot. Mejor uno nuevo solo para esto.</p>
+    <label class="f" for="schat">Tu chat id</label><div style="display:flex;gap:8px"><input id="schat" value="${esc(t.chat_id)}" placeholder="123456789"><button class="btn" onclick="detectChat()">Detectar</button></div>
+    <p class="note">Escribe cualquier cosa a tu bot en Telegram y pulsa «Detectar».</p>
+    <div id="schats" class="qk"></div>
+    <label class="f" for="shb">Aviso si se va la luz o internet en casa (opcional)</label><input id="shb" value="${esc(settings.heartbeat_url)}" autocapitalize="off" placeholder="https://hc-ping.com/…">
+    <p class="note">Crea un «check» gratis en healthchecks.io (periodo 1 min, gracia 5 min) y pega aquí su URL de ping.</p>`;
+  showModal(`<h2>Notificaciones y ajustes</h2>
+    ${NATIVE ? `
+      <label class="chk"><span>Avisos en este móvil</span><input type="checkbox" id="navisos" ${n.avisos ? 'checked' : ''}></label>
+      <p class="note">El móvil pregunta a tus Pi cada 30 s por Tailscale y te muestra notificaciones de Android. Si una Pi deja de responder, te avisa el propio móvil.</p>`
+    : `<p class="note">Llegan por Telegram. Cada Pi vigila a las demás: si una se apaga o se queda sin red, otra te avisa.</p>${tg}`}
+    <label class="f">Resumen diario</label>
+    <div style="display:flex;gap:10px;align-items:center"><label class="chk" style="flex:1"><span>Mandarlo cada día a las</span><input type="checkbox" id="rzon" ${rz.activo ? 'checked' : ''}></label><input id="rzh" type="time" value="${esc(rz.hora)}" aria-label="Hora del resumen"></div>
+    <label class="f">Avisarme también</label>
+    <label class="chk"><span>Cuando una Pi se enciende</span><input type="checkbox" id="sboot" ${a.boot ? 'checked' : ''}></label>
+    <label class="chk"><span>Cuando una Pi se apaga o reinicia</span><input type="checkbox" id="sshut" ${a.shutdown ? 'checked' : ''}></label>
+    <p class="note">Siempre avisa si una Pi deja de responder, si un bot falla o se cuelga, y de bajo voltaje, temperatura o SD llena.</p>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+      <div><label class="f" for="stemp">Temp. máx °C</label><input id="stemp" type="number" value="${a.temp}"></div>
+      <div><label class="f" for="sdisk">SD máx %</label><input id="sdisk" type="number" value="${a.disk}"></div>
+      <div><label class="f" for="soff">Caída tras min</label><input id="soff" type="number" value="${n ? n.caida_min : a.offline_after}"></div></div>
+    ${NATIVE ? `<details style="margin-top:12px"${t.chat_id ? ' open' : ''}><summary class="mut">Telegram (opcional, para avisos sin Tailscale)</summary>${tg}</details>` : ''}
+    <pre id="smsg" style="display:none"></pre>
+    <div class="row2"><button class="btn" onclick="testNotify()">Enviar prueba</button><button class="btn pri" onclick="saveSettings()">Guardar</button></div>
+    <div class="col"><button class="btn" onclick="closeModal()">Cerrar</button></div>`);
+}
+function readSettings() {
+  const off = +$('#soff').value || 3;
+  settings = {
+    telegram: { token: $('#stok').value.trim(), chat_id: $('#schat').value.trim() },
+    alerts: { boot: $('#sboot').checked, shutdown: $('#sshut').checked, temp: +$('#stemp').value || 75, disk: +$('#sdisk').value || 90, offline_after: off },
+    heartbeat_url: $('#shb').value.trim(),
+    resumen: { activo: $('#rzon').checked, hora: $('#rzh').value || '22:00' }
+  };
+  store.set('pimon.settings', settings);
+  if (NATIVE) NATIVE.setAjustes(JSON.stringify({ avisos: $('#navisos').checked, caida_min: off }));
+}
+async function syncAll() {
+  return Promise.all(pis.map(async pi => {
+    try {
+      await post(pi, '/api/settings', { ...settings, peers: pis.filter(o => o.id !== pi.id).map(({ name, url, token }) => ({ name, url, token })) });
+      return `✓ ${pi.name}`;
+    } catch (e) { return `✗ ${pi.name}: ${e.message}` }
+  }));
+}
+function smsg(t) { const m = $('#smsg'); if (m) { m.style.display = ''; m.textContent = t } }
+async function saveSettings() { readSettings(); smsg('Guardando…'); smsg('Guardado en:\n' + (await syncAll()).join('\n')) }
+async function testNotify() {
+  readSettings(); smsg('Enviando…');
+  await syncAll();
+  let last = 'Añade antes alguna Raspberry';
+  for (const pi of pis) {
+    try {
+      const r = await post(pi, '/api/notify/test', {}, 15000);
+      const lines = [];
+      if (NATIVE) {
+        NATIVE.revisarYa();
+        lines.push(nativeAjustes().avisos ? `✓ Prueba creada en ${pi.name}: la notificación te llega en unos segundos.` : '✗ Los avisos en este móvil están desactivados.');
+      }
+      if (r.telegram) lines.push(r.telegram_ok ? '✓ Telegram: mensaje enviado.' : `✗ Telegram: ${r.telegram_error}`);
+      else if (!NATIVE) lines.push('✗ Telegram no está configurado (pon token y chat id).');
+      return smsg(lines.join('\n'));
+    } catch (e) { last = `✗ ${pi.name}: ${e.message}` }
+  }
+  smsg(last);
+}
+async function detectChat() {
+  const token = $('#stok').value.trim();
+  if (!token) return toast('Pon primero el token del bot');
+  $('#schats').innerHTML = '<span class="note">Buscando…</span>';
+  let err;
+  for (const pi of pis) {
+    try {
+      const { chats } = await post(pi, '/api/telegram/detect', { token }, 15000);
+      if (!chats.length) return $('#schats').innerHTML = '<span class="note">No hay mensajes. Escribe algo a tu bot en Telegram y vuelve a pulsar.</span>';
+      if (chats.length === 1) { $('#schat').value = chats[0].id; return $('#schats').innerHTML = `<span class="note">✓ ${esc(chats[0].name)}</span>` }
+      return $('#schats').innerHTML = chats.map(c => `<button onclick="$('#schat').value='${jsq(c.id)}'">${esc(c.name)}</button>`).join('');
+    } catch (e) { err = e.message }
+  }
+  $('#schats').innerHTML = `<span class="note r">${esc(err || 'Añade antes alguna Raspberry')}</span>`;
+}
+
+// ================================================================ AÑADIR / EDITAR Pi
+function openForm(id) {
+  const pi = piById(id) || { name: '', url: 'http://', token: '' };
+  showModal(`<h2>${id ? 'Editar' : 'Añadir'} Raspberry</h2>
+    <label class="f" for="fname">Nombre</label><input id="fname" value="${esc(pi.name)}" placeholder="homelab1">
+    <label class="f" for="furl">Dirección del agente</label><input id="furl" value="${esc(pi.url)}" autocapitalize="off" placeholder="http://100.x.x.x:8790">
+    <p class="note">Usa la IP de Tailscale (100.x.x.x) para que funcione fuera de casa y para que las Pi se vigilen entre ellas.</p>
+    <label class="f" for="ftok">Token</label><input id="ftok" value="${esc(pi.token)}" autocapitalize="off" placeholder="el que te dio el instalador">
+    <p id="fmsg" class="note"></p>
+    <div class="row2"><button class="btn" onclick="testForm()">Probar conexión</button><button class="btn pri" onclick="saveForm('${id || ''}')">Guardar</button></div>
+    <div class="col"><button class="btn" onclick="closeModal()">Cancelar</button>${id ? `<button class="btn bad" onclick="delPi('${id}')">Quitar de la app</button>` : ''}</div>`);
+}
+const formPi = () => ({ name: $('#fname').value.trim(), url: $('#furl').value.trim().replace(/\/+$/, ''), token: $('#ftok').value.trim() });
+async function testForm() {
+  $('#fmsg').textContent = 'Probando…';
+  try { const r = await api(formPi(), '/api/ping'); $('#fmsg').innerHTML = `<span class="g">✓ Conectado a ${esc(r.hostname)} (agente ${esc(r.version)})</span>`; if (!$('#fname').value) $('#fname').value = r.hostname }
+  catch (e) { $('#fmsg').innerHTML = `<span class="r">✗ ${esc(e.message)}</span>` }
+}
+function saveForm(id) {
+  const f = formPi(); if (!f.name || !/^https?:\/\//.test(f.url) || !f.token) return $('#fmsg').textContent = 'Rellena nombre, dirección (http://…) y token.';
+  if (id) Object.assign(piById(id), f); else pis.push({ id: Math.random().toString(36).slice(2, 10), ...f });
+  savePis(); closeModal(); refreshAll();
+  if (settings.telegram.chat_id) syncAll();
+}
+function delPi(id) {
+  if (!confirm('¿Quitar esta Raspberry de la app?')) return;
+  pis = pis.filter(p => p.id !== id); savePis(); delete cache[id]; delete evs[id]; closeModal(); go('inicio', {}, true);
+  if (settings.telegram.chat_id) syncAll();
+}
+
+// ================================================================ hojas
+function showModal(html) { $('#sheet').innerHTML = html; $('#modal').classList.add('on') }
+function closeModal() { $('#modal').classList.remove('on') }
+$('#modal').onclick = e => { if (e.target.id === 'modal') closeModal() };
+
+// ================================================================ arranque
+if (!NATIVE && !pis.length && location.protocol.startsWith('http') && location.port) {
+  setTimeout(() => { openForm(); $('#furl').value = location.origin; $('#fname').value = location.hostname.split('.')[0] }, 300);
+}
+render(); refreshAll();
+setInterval(() => {
+  if (document.hidden || $('#modal').classList.contains('on')) return;
+  if (document.activeElement && ['INPUT', 'SELECT'].includes(document.activeElement.tagName)) return;
+  refreshAll();
+}, 15000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshAll() });
+</script>
+</body>
+</html>

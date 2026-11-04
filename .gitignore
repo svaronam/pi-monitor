@@ -1,0 +1,11 @@
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+app-android/app/src/main/assets/
+__pycache__/
+
+# Clave de firma de la APK: va en GitHub Secrets, nunca en el repo
+*.jks
+*.keystore
