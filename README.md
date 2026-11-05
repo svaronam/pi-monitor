@@ -11,6 +11,21 @@ Sistema de **monitorización y control de Raspberry Pi** desde el móvil. Un age
 - **Sin falsas alarmas**: distingue entre "la Pi no responde" y "el móvil no tiene conexión con la VPN", y recupera los avisos perdidos al reconectar.
 - **Hub de servicios**: feed de eventos y resumen diario de todos los servicios alojados.
 
+## Capturas
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/capturas/inicio.png" width="260" alt="Inicio: estado de las dos Raspberry Pi y de sus servicios"></td>
+    <td align="center"><img src="docs/capturas/pi.png" width="260" alt="Detalle de una Pi: gráficas de 24 h y uso de la tarjeta SD por servicio"></td>
+    <td align="center"><img src="docs/capturas/bot.png" width="260" alt="Detalle de un servicio: control, horario y vigilancia"></td>
+  </tr>
+  <tr>
+    <td align="center">Inicio</td>
+    <td align="center">Detalle de una Pi</td>
+    <td align="center">Detalle de un servicio</td>
+  </tr>
+</table>
+
 ## Arquitectura
 
 ```
