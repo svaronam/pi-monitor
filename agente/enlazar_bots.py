@@ -22,7 +22,6 @@ CONOCIDOS = {
     "insta-bot.service": ("instagram", "otros"),
     "oporadar.service": ("oporadar", "opos"),
     "opotest.service": ("opotest", "opos"),
-    "opotest-ocr.service": ("opotest-ocr", "opos"),
     "recetabot.service": ("recetabot", "otros"),
 }
 BOT_DEFAULTS = {"managed": False, "autorestart": True, "max_restarts": 3, "hang_after": 15}
