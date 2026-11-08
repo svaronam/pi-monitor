@@ -72,6 +72,8 @@ main{flex:1;padding:4px 16px calc(96px + env(safe-area-inset-bottom));display:fl
 .botrow .nm{font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .botrow .ad{font:12px var(--mono);color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .botrow .lk.offn .ad{color:var(--dim)}
+.botrow .ad.ln{align-self:flex-start;max-width:100%;cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+.botrow .ad.ln:hover,.botrow .ad.ln:focus-visible{color:var(--blue-txt);text-decoration-style:solid;outline:none}
 a.pill{display:inline-flex;align-items:center;gap:6px}
 .botrow .in{flex:none;font-size:12px;color:var(--mut);max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sw{flex:none;width:52px;height:44px;border:0;background:transparent;padding:0;display:flex;align-items:center;justify-content:center}
@@ -435,10 +437,12 @@ function botRow(pi, b) {
   const s = botState(b), on = botOn(b), key = pi.id + '|' + b.unit, ad = botAddr(pi, b);
   return `<div class="botrow">
     <button class="lk ${on ? '' : 'offn'}" onclick="go('bot',{pi:'${pi.id}',unit:'${jsq(b.unit)}'})">
-      <span class="dot sm ${s.lvl}"></span><span class="nmw"><span class="nm">${esc(b.label)}</span>${ad ? `<span class="ad">${esc(ad.label)}</span>` : ''}</span><span class="in ${s.lvl === 'bad' ? 'r' : s.lvl === 'warn' ? 'w' : ''}">${esc(s.txt)}</span></button>
+      <span class="dot sm ${s.lvl}"></span><span class="nmw"><span class="nm">${esc(b.label)}</span>${ad ? (ad.href && !NATIVE ? `<span class="ad ln" role="link" tabindex="0" title="Abrir ${esc(ad.href)}" onclick="abrirPanel(event,'${jsq(ad.href)}')" onkeydown="if(event.key==='Enter')abrirPanel(event,'${jsq(ad.href)}')">${esc(ad.label)}</span>` : `<span class="ad">${esc(ad.label)}</span>`) : ''}</span><span class="in ${s.lvl === 'bad' ? 'r' : s.lvl === 'warn' ? 'w' : ''}">${esc(s.txt)}</span></button>
     <button class="sw ${on ? 'on' : ''} ${busy.has(key) ? 'busy' : ''}" role="switch" aria-checked="${on}" aria-label="${on ? 'Desactivar' : 'Activar'} ${esc(b.label)}" onclick="toggleBot('${pi.id}','${jsq(b.unit)}')"><i></i></button>
   </div>`;
 }
+// En el PC, pinchar en homelab1:8787 abre el panel del bot en otra pestaña sin entrar en su ficha
+function abrirPanel(ev, href) { ev.stopPropagation(); ev.preventDefault(); window.open(href, '_blank', 'noopener') }
 function piCard(pi) {
   const c = cache[pi.id], h = health(c), s = c?.status;
   const dlim = settings.alerts.disk || 90;
