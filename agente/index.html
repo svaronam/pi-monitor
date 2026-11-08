@@ -33,6 +33,7 @@ code,.mono{font-family:var(--mono)}
 .top .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .top h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .sub{font-size:13px;color:var(--mut)}
+.top h1 .selfad{margin-left:10px;font:400 13px var(--mono);letter-spacing:0;color:var(--mut);vertical-align:middle}
 .top.back{padding:calc(14px + env(safe-area-inset-top)) 12px 4px;gap:4px}
 .ib{width:44px;height:44px;flex:none;border-radius:12px;border:1px solid var(--line);background:var(--card);display:flex;align-items:center;justify-content:center;position:relative;padding:0}
 .ib.plain{border:0;background:transparent}
@@ -441,6 +442,14 @@ function botRow(pi, b) {
     <button class="sw ${on ? 'on' : ''} ${busy.has(key) ? 'busy' : ''}" role="switch" aria-checked="${on}" aria-label="${on ? 'Desactivar' : 'Activar'} ${esc(b.label)}" onclick="toggleBot('${pi.id}','${jsq(b.unit)}')"><i></i></button>
   </div>`;
 }
+// Dirección de esta web (homelab1:8790) cuando se abre desde el navegador; en la APK no hay
+function selfAddr() {
+  if (!/^https?:$/.test(location.protocol)) return '';
+  const port = location.port || (location.protocol === 'https:' ? '443' : '80');
+  const pi = pis.find(p => { try { const u = new URL(p.url); return u.hostname === location.hostname && (u.port || '80') === port } catch { return false } })
+          || pis.find(p => { try { return new URL(p.url).hostname === location.hostname } catch { return false } });
+  return `${pi ? pi.name : location.hostname}:${port}`;
+}
 // En el PC, pinchar en homelab1:8787 abre el panel del bot en otra pestaña sin entrar en su ficha
 function abrirPanel(ev, href) { ev.stopPropagation(); ev.preventDefault(); window.open(href, '_blank', 'noopener') }
 function piCard(pi) {
@@ -471,7 +480,7 @@ function topIssue() {
 function renderInicio() {
   const bots = allBots();
   const nBots = bots.filter(x => !/^pi-agent/.test(x.b.unit)).length;
-  setTop(`<div class="top"><div class="t"><h1>Pi Monitor</h1><span class="sub">${pis.length} Raspberry · ${nBots} bots${NATIVE ? ' · por Tailscale' : ''}</span></div>
+  setTop(`<div class="top"><div class="t"><h1>Pi Monitor${selfAddr() ? `<span class="selfad" title="Dirección de esta web">${esc(selfAddr())}</span>` : ''}</h1><span class="sub">${pis.length} Raspberry · ${nBots} bots${NATIVE ? ' · por Tailscale' : ''}</span></div>
     <button class="ib" aria-label="Actualizar" onclick="toast('Actualizando…',1000);refreshAll()">${ICO.refresh}</button>
     <button class="ib" aria-label="Notificaciones y ajustes" onclick="openSettings()">${ICO.bell}${pis.some(p => health(cache[p.id]).lvl === 'bad') ? '<span class="badge-dot" style="background:var(--bad)"></span>' : ''}</button></div>`);
   if (!pis.length) {
