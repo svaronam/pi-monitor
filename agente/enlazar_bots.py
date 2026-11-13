@@ -23,6 +23,7 @@ CONOCIDOS = {
     "oporadar.service": ("oporadar", "opos"),
     "opotest.service": ("opotest", "opos"),
     "recetabot.service": ("recetabot", "otros"),
+    "gsialerta.service": ("gsi-alerta", "opos"),
 }
 BOT_DEFAULTS = {"managed": False, "autorestart": True, "max_restarts": 3, "hang_after": 15}
 

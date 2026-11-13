@@ -25,6 +25,7 @@ import sys
 import time
 
 # puerto viejo -> puerto nuevo. homelab1 en el 879x y homelab2 en el 880x; el 8790 es del Pi Monitor.
+# Bots nuevos ya instalados en su sitio (no hace falta moverlos): gsi-alerta en homelab2:8806.
 PLANES = {
     "homelab1": {8787: 8791, 8788: 8792, 8791: 8793, 8796: 8794},
     "homelab2": {8791: 8801, 8792: 8802, 8795: 8803, 8899: 8804, 8080: 8805},
